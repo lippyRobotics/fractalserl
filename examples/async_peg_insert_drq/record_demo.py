@@ -30,6 +30,7 @@ if __name__ == "__main__":
 
     obs, _ = env.reset()
 
+    batch = []
     transitions = []
     success_count = 0
     success_needed = 20
@@ -64,12 +65,14 @@ if __name__ == "__main__":
                 dones=done,
             )
         )
-        transitions.append(transition)
+        batch.append(transition)
 
         obs = next_obs
 
         if done:
             success_count += rew
+            if rew:
+                transitions.append(batch)
             total_count += 1
             print(
                 f"{rew}\tGot {success_count} successes of {total_count} trials. {success_needed} successes needed."

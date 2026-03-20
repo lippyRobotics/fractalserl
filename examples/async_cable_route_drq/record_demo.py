@@ -39,7 +39,7 @@ if __name__ == "__main__":
         key=key,
         sample=env.observation_space.sample(),
         image_keys=image_keys,
-        checkpoint_path="/home/student/code/serl/examples/async_cable_route_drq/classifier_checkpoints/",
+        checkpoint_path="/home/student/code/serl/examples/async_cable_route_drq/classifier/checkpoints/",
     )
     env = BinaryRewardClassifierWrapper(env, classifier_func)
 

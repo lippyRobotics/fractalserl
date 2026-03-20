@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     pos_count = 0
     neg_count = 0
-    pos_needed = 0     # Define a positive reward max
+    pos_needed = 0    # Define a positive reward max
     neg_needed = 3
 
     neg_transition_count = 0
@@ -51,8 +51,8 @@ if __name__ == "__main__":
 
     ## Define Output file and safety checks
     uuid = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    pos_file_name = f"classifier_demos/positive_cable_route_{pos_needed}_demos_{uuid}.pkl"
-    neg_file_name = f"classifier_demos/negative_cable_route_{neg_needed}_demos_{uuid}.pkl"
+    pos_file_name = f"demos/positive_cable_route_{pos_needed}_demos_{uuid}.pkl"
+    neg_file_name = f"demos/negative_cable_route_{neg_needed}_demos_{uuid}.pkl"
 
     file_dir = os.path.dirname(os.path.realpath(__file__))  # same dir as this script
     pos_file_path = os.path.join(file_dir, pos_file_name)
@@ -99,7 +99,7 @@ if __name__ == "__main__":
             print(
                 f"{neg_needed - neg_count} negative demos left."
             )
-            obs, _ = env.reset()
+            obs, _ = env.reset(pos_reset=False)
             transition_batch.clear()
 
     ## Record Positive demos
