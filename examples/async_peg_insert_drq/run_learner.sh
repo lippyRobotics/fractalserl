@@ -10,7 +10,7 @@ export ENV_NAME="FrankaPegInsert-Vision-v0" && \
 export TIMESTAMP=$(date +"%m-%d-%Y-%H-%M-%S") && \
 export CHECKPOINT_DIR="$SCRIPT_DIR/checkpoints/checkpoints-$TIMESTAMP" && \
 
-# Create checkpoint directory if it doesn't exist
+# Create checkpoint directory if it doesn't exist. Used to saved learn policy.
 if [ ! -d "$CHECKPOINT_DIR" ]; then
     echo "Creating checkpoint directory: $CHECKPOINT_DIR"
     mkdir -p "$CHECKPOINT_DIR" || {
@@ -23,19 +23,19 @@ python async_drq_randomized.py "$@" \
     --learner \
     --render \
     --env $ENV_NAME \
-    --exp_name="PegInsert-With-Checkpoints-10k-steps" \
-    --random_steps 0 \
-    --seed 4 \
+    --exp_name="PegInsert-march_2026" \
+    --seed 5 \
     --training_starts 1 \
+    --max_steps 3501 \
     --save_model \
     --batch_size 256 \
     --critic_actor_ratio 8 \
-    --replay_buffer_capacity 3_600_000 \
+    --replay_buffer_capacity 5_000 \
     --random_steps 1_000 \
     --encoder_type resnet-pretrained \
-    --demo_path peg_insert_20_demos_2026-01-16_19-44-07.pkl \
+    --demo_path peg_insert_20_demos_2026-03-19_16-45-22.pkl \
     --save_model \
-    --replay_buffer_type "fractal_symmetry_replay_buffer" \
+    --replay_buffer_type "memory_efficient_replay_buffer" \
     --branch_method "constant" \
     --starting_branch_count 27 \
     --workspace_width 0.3 \

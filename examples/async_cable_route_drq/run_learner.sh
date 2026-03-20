@@ -17,11 +17,11 @@ python async_drq_randomized.py "$@" \
     --training_starts 1 \
     --critic_actor_ratio 4 \
     --batch_size 256 \
-    --max_steps 8000 \
-    --replay_buffer_type fractal_symmetry_replay_buffer \
-    --replay_buffer_capacity 36_000_000 \
+    --max_steps 8001 \
+    --replay_buffer_type memory_efficient_replay_buffer \
+    --replay_buffer_capacity 200_000 \
+    --starting_branch_count 27 \
     --encoder_type resnet-pretrained \
-    --demo_path /home/student/code/serl/examples/async_cable_route_drq/demos/cable_route_20_demos_2026-02-15_16-41-39.pkl \
+    --demo_path /home/student/code/serl/examples/async_cable_route_drq/demos/THE_cable_route_20_demos_2026-02-24_17-14-56.pkl \
     --checkpoint_period 1000 \
     --checkpoint_path $CHECKPOINT_DIR
-    --eval_period 2000 \

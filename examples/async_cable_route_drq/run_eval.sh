@@ -11,7 +11,7 @@ python async_drq_randomized.py "$@" \
     --actor \
     --render \
     --env FrankaCableRoute-Vision-v0 \
-    --reward_classifier_ckpt_path /home/student/code/serl/examples/async_cable_route_drq/classifier_checkpoints/ \
+    --reward_classifier_ckpt_path /home/student/code/serl/examples/async_cable_route_drq/classifier/checkpoints/ \
     --eval_checkpoint_step 7000 \
-    --eval_n_trajs 50 \
-    --checkpoint_path "$CHECKPOINT_EVAL/fractal_01" \
+    --eval_n_trajs 9999999 \
+    --checkpoint_path "$CHECKPOINT_EVAL/baseline_01" \

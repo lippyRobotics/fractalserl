@@ -12,7 +12,7 @@ python async_drq_randomized.py "$@" \
     --seed 0 \
     --random_steps 0 \
     --encoder_type resnet-pretrained \
-    --reward_classifier_ckpt_path /home/student/code/serl/examples/async_cable_route_drq/classifier_checkpoints/ \
+    --reward_classifier_ckpt_path /home/student/code/serl/examples/async_cable_route_drq/classifier/checkpoints/ \
     --max_traj_length 100 \
     # --eval_checkpoint_step 20000 \
     # --eval_n_trajs 20 \

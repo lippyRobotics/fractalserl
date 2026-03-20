@@ -23,6 +23,6 @@ python async_drq_randomized.py "$@" \
     --actor \
     --render \
     --env "FrankaPegInsert-Vision-v0" \
-    --eval_checkpoint_step 4500 \
-    --eval_n_trajs 100 \
-    --checkpoint_path "$CHECKPOINT_EVAL/baseline_03" \
+    --eval_checkpoint_step 3500 \
+    --eval_n_trajs 500000 \
+    --checkpoint_path "$CHECKPOINT_EVAL/baseline_04" \

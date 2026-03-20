@@ -24,7 +24,7 @@ python async_drq_randomized.py "$@" \
     --render \
     --env "FrankaPegInsert-Vision-v0" \
     --random_steps 0 \
-    --seed 4 \
+    --seed 5 \
     --training_starts 200 \
     --save_model \
     --max_steps 15000 \
