@@ -21,7 +21,7 @@ from absl import app, flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-    "reward_classifier_ckpt_path", "./classifier_checkpoints", "Path to reward classifier ckpt."
+    "reward_classifier_ckpt_path", "./checkpoints", "Path to reward classifier ckpt."
 )
 
 

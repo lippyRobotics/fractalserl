@@ -37,7 +37,7 @@ os.environ["TF_GPU_ALLOCATOR"] = "cuda_malloc_async"
 FLAGS = flags.FLAGS
 flags.DEFINE_multi_string("positive_demo_paths", None, "paths to positive demos")
 flags.DEFINE_multi_string("negative_demo_paths", None, "paths to negative demos")
-flags.DEFINE_string("classifier_ckpt_path", "./classifier_checkpoints", "Path to classifier checkpoint")
+flags.DEFINE_string("classifier_ckpt_path", "./checkpoints", "Path to classifier checkpoint")
 flags.DEFINE_integer("batch_size", 256, "Batch size for training")
 flags.DEFINE_integer("num_epochs", 100, "Number of epochs for training")
 
@@ -87,14 +87,14 @@ def train_reward_classifier(observation_space, action_space):
     print(f"success buffer size: {len(pos_buffer)}")
     pos_iterator = pos_buffer.get_iterator(
         sample_args={
-            "batch_size": FLAGS.batch_size // 2,
+            "batch_size": FLAGS.batch_size * len(pos_buffer) // len(neg_buffer),
             "pack_obs_and_next_obs": False,
         },
         device=sharding.replicate(),
     )
     neg_iterator = neg_buffer.get_iterator(
         sample_args={
-            "batch_size": FLAGS.batch_size // 2,
+            "batch_size": FLAGS.batch_size - (FLAGS.batch_size * len(pos_buffer) // len(neg_buffer)),
             "pack_obs_and_next_obs": False,
         },
         device=sharding.replicate(),
@@ -151,8 +151,8 @@ def train_reward_classifier(observation_space, action_space):
         sample = data_augmentation_fn(key, sample)
         labels = jnp.concatenate(
             [
-                jnp.ones((FLAGS.batch_size // 2, 1)),
-                jnp.zeros((FLAGS.batch_size // 2, 1)),
+                jnp.ones((FLAGS.batch_size * len(pos_buffer) // len(neg_buffer), 1)),
+                jnp.zeros((FLAGS.batch_size - (FLAGS.batch_size * len(pos_buffer) // len(neg_buffer)), 1)),
             ],
             axis=0,
         )

@@ -67,7 +67,7 @@ def train_reward_classifier(observation_space, action_space):
     pos_buffer = MemoryEfficientReplayBufferDataStore(
         observation_space,
         action_space,
-        capacity=10000,
+        capacity=20000,
         image_keys=image_keys,
     )
     pos_buffer = populate_data_store(pos_buffer, FLAGS.positive_demo_paths)
@@ -75,7 +75,7 @@ def train_reward_classifier(observation_space, action_space):
     neg_buffer = MemoryEfficientReplayBufferDataStore(
         observation_space,
         action_space,
-        capacity=10000,
+        capacity=20000,
         image_keys=image_keys,
     )
     neg_buffer = populate_data_store(neg_buffer, FLAGS.negative_demo_paths)
