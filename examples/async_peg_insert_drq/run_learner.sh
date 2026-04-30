@@ -1,4 +1,3 @@
-
 # All export statements end with && \ to chain them together
 export XLA_PYTHON_CLIENT_PREALLOCATE=false && \
 # XLA memory fraction with learner+action <0.8. Learner needs more.
@@ -21,23 +20,26 @@ fi
 
 python async_drq_randomized.py "$@" \
     --learner \
-    --render \
     --env $ENV_NAME \
     --exp_name="PegInsert-march_2026" \
     --seed 5 \
-    --training_starts 1 \
-    --max_steps 3501 \
-    --save_model \
-    --batch_size 256 \
-    --critic_actor_ratio 8 \
-    --replay_buffer_capacity 5_000 \
     --random_steps 1_000 \
-    --encoder_type resnet-pretrained \
-    --demo_path peg_insert_20_demos_2026-03-19_16-45-22.pkl \
+    --training_starts 1 \
+    --critic_actor_ratio 8 \
+    --batch_size 256 \
+    --max_steps 3501 \
+    --replay_buffer_type "fractal_symmetry_replay_buffer" \
     --save_model \
-    --replay_buffer_type "memory_efficient_replay_buffer" \
-    --branch_method "constant" \
+    --replay_buffer_capacity 3_600_000 \
     --starting_branch_count 27 \
+    --branch_method "constant" \
+    --split_method "never" \
+    --alpha 0.2 \
+    --max_depth 3 \
+    --branching_factor 3 \
     --workspace_width 0.3 \
+    --encoder_type resnet-pretrained \
+    --demo_path peg_insert_20_demos_2026-04-23_17-52-59.pkl \
     --checkpoint_period 500 \
     --checkpoint_path "$CHECKPOINT_DIR" \
+    --debug \

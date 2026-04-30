@@ -19,10 +19,11 @@ export CHECKPOINT_EVAL="/home/student/code/serl/examples/async_peg_insert_drq/ch
 #    }
 #fi
 
-python async_drq_randomized.py "$@" \
+python async_drq_randomized.py \
     --actor \
     --render \
     --env "FrankaPegInsert-Vision-v0" \
     --eval_checkpoint_step 3500 \
-    --eval_n_trajs 500000 \
-    --checkpoint_path "$CHECKPOINT_EVAL/baseline_04" \
+    --eval_n_trajs 50000000 \
+    --checkpoint_path "$CHECKPOINT_EVAL/checkpoints-04-23-2026-19-01-43" \
+    "$@"

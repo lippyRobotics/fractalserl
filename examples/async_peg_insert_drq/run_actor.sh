@@ -4,7 +4,6 @@ export XLA_PYTHON_CLIENT_PREALLOCATE=false && \
 export XLA_PYTHON_CLIENT_MEM_FRACTION=.3 && \
 # Use malloc_async to reduce fragmentation, overlap memory allocation with compute, lower stalls and improve worklads. Requires cuda11.2+
 export TF_GPU_ALLOCATOR=cuda_malloc_async && \
-export SCRIPT_DIR=$(dirname "$(realpath "$0")") && \
 export TIMESTAMP=$(date +"%m-%d-%Y-%H-%M-%S") && \
 export CHECKPOINT_DIR="$SCRIPT_DIR/checkpoints/checkpoints-$TIMESTAMP" && \
 export CHECKPOINT_EVAL="/home/student/code/serl/examples/async_peg_insert_drq/checkpoints/checkpoints-07-14-2025-23-15-59" && \

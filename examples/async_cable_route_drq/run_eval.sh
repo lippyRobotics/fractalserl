@@ -6,12 +6,13 @@ export XLA_PYTHON_CLIENT_MEM_FRACTION=.3 && \
 export TF_GPU_ALLOCATOR=cuda_malloc_async && \
 
 export CHECKPOINT_EVAL="/home/student/code/serl/examples/async_cable_route_drq/checkpoints" && \
+export STEP=8000
 
 python async_drq_randomized.py "$@" \
     --actor \
     --render \
     --env FrankaCableRoute-Vision-v0 \
+    --eval_checkpoint_step $STEP \
     --reward_classifier_ckpt_path /home/student/code/serl/examples/async_cable_route_drq/classifier/checkpoints/ \
-    --eval_checkpoint_step 7000 \
-    --eval_n_trajs 9999999 \
+    --eval_n_trajs 50 \
     --checkpoint_path "$CHECKPOINT_EVAL/baseline_01" \

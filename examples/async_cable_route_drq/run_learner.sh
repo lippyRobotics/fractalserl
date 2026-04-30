@@ -11,17 +11,23 @@ export CHECKPOINT_DIR="$SCRIPT_DIR/checkpoints/checkpoints-$TIMESTAMP" && \
 python async_drq_randomized.py "$@" \
     --learner \
     --env FrankaCableRoute-Vision-v0 \
-    --exp_name cable_route_20_demos \
-    --seed 0 \
+    --exp_name="Franka-CableRoute-V2" \
+    --seed 1 \
     --random_steps 600 \
     --training_starts 1 \
     --critic_actor_ratio 4 \
     --batch_size 256 \
-    --max_steps 8001 \
-    --replay_buffer_type memory_efficient_replay_buffer \
-    --replay_buffer_capacity 200_000 \
+    --max_steps 8501 \
+    --replay_buffer_type fractal_symmetry_replay_buffer \
+    --replay_buffer_capacity 3_600_000 \
     --starting_branch_count 27 \
+    --branch_method "constant" \
+    --split_method "never" \
+    --alpha 0.2 \
+    --max_depth 3 \
+    --branching_factor 3 \
+    --workspace_width 0.3 \
     --encoder_type resnet-pretrained \
-    --demo_path /home/student/code/serl/examples/async_cable_route_drq/demos/THE_cable_route_20_demos_2026-02-24_17-14-56.pkl \
+    --demo_path /home/student/code/serl/examples/async_cable_route_drq/demos/fractal_01.pkl \
     --checkpoint_period 1000 \
     --checkpoint_path $CHECKPOINT_DIR

@@ -9,7 +9,7 @@ python async_drq_randomized.py "$@" \
     --actor \
     --render \
     --env FrankaCableRoute-Vision-v0 \
-    --seed 0 \
+    --seed 1 \
     --random_steps 0 \
     --encoder_type resnet-pretrained \
     --reward_classifier_ckpt_path /home/student/code/serl/examples/async_cable_route_drq/classifier/checkpoints/ \
