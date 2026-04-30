@@ -72,8 +72,12 @@ flags.DEFINE_string("checkpoint_path", None, "Path to save checkpoints.")
 # replay buffer flags
 flags.DEFINE_string("replay_buffer_type", "memory_efficient_replay_buffer", "Which replay buffer to use")
 flags.DEFINE_integer("replay_buffer_capacity", 200000, "Replay buffer capacity.")
+flags.DEFINE_integer("branching_factor", None, "Factor by which branch count is changed")
+flags.DEFINE_integer("max_depth", None, "Maximum number of splits that may occur in one episode")
 flags.DEFINE_string("branch_method", "constant", "Method for how many branches to generate")
-flags.DEFINE_float("workspace_width", 0.5, "Workspace width in meters")
+flags.DEFINE_string("split_method", "never", "Method for when to change number of branches")
+flags.DEFINE_float("alpha", 0.2, "Rate of change of max_traj_length")
+flags.DEFINE_float("workspace_width", 0.3, "Workspace width in meters")
 flags.DEFINE_integer("starting_branch_count", 27, "Initial number of branches")
 
 flags.DEFINE_integer(
@@ -155,7 +159,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
 
     client.recv_network_callback(update_params)
 
-    obs, _ = env.reset()
+    obs, _ = env.reset(joint_reset=True)
     done = False
 
     # training loop
@@ -379,6 +383,11 @@ def main(_):
             # rlds_logger_path=FLAGS.log_rlds_path,
             type=FLAGS.replay_buffer_type,
             branch_method=FLAGS.branch_method,
+            branching_factor=FLAGS.branching_factor,
+            max_depth=FLAGS.max_depth,
+            max_traj_length=FLAGS.max_traj_length,
+            split_method=FLAGS.split_method,
+            alpha=FLAGS.alpha,
             starting_branch_count=FLAGS.starting_branch_count,
             workspace_width=FLAGS.workspace_width,
             x_obs_idx=x_obs_idx,
@@ -392,6 +401,11 @@ def main(_):
             # rlds_logger_path=FLAGS.log_rlds_path,
             type=FLAGS.replay_buffer_type,
             branch_method=FLAGS.branch_method,
+            branching_factor=FLAGS.branching_factor,
+            max_depth=FLAGS.max_depth,
+            max_traj_length=FLAGS.max_traj_length,
+            split_method=FLAGS.split_method,
+            alpha=FLAGS.alpha,
             starting_branch_count=FLAGS.starting_branch_count,
             workspace_width=FLAGS.workspace_width,
             x_obs_idx=x_obs_idx,
@@ -399,6 +413,7 @@ def main(_):
             # preload_rlds_path=FLAGS.preload_rlds_path,
             image_keys=image_keys,
         )
+        print(demo_buffer._size)
         import pickle as pkl
 
         with open(FLAGS.demo_path, "rb") as f:
@@ -426,7 +441,7 @@ def main(_):
 
     else:
         raise NotImplementedError("Must be either a learner or an actor")
-
+    return
 
 if __name__ == "__main__":
     app.run(main)

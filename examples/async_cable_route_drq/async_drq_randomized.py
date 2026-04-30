@@ -77,7 +77,11 @@ flags.DEFINE_string(
 # replay buffer flags
 flags.DEFINE_string("replay_buffer_type", "memory_efficient_replay_buffer", "Which replay buffer to use")
 flags.DEFINE_integer("replay_buffer_capacity", 200000, "Replay buffer capacity.")
+flags.DEFINE_integer("branching_factor", None, "Factor by which branch count is changed")
+flags.DEFINE_integer("max_depth", None, "Maximum number of splits that may occur in one episode")
 flags.DEFINE_string("branch_method", "constant", "Method for how many branches to generate")
+flags.DEFINE_string("split_method", "never", "Method for when to change number of branches")
+flags.DEFINE_float("alpha", 0.2, "Rate of change of max_traj_length")
 flags.DEFINE_float("workspace_width", 0.5, "Workspace width in meters")
 flags.DEFINE_integer("starting_branch_count", 27, "Initial number of branches")
 
@@ -234,7 +238,7 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
     """
     # set up wandb and logging
     wandb_logger = make_wandb_logger(
-        project="Franka-CableRoute",
+        project="CableRoute-april_2026",
         description=FLAGS.exp_name or FLAGS.env,
         debug=FLAGS.debug,
     )
@@ -381,6 +385,18 @@ def main(_):
         jax.tree.map(jnp.array, agent), sharding.replicate()
     )
 
+    ## Set indices to be transformed by fractal class for the serl_robot_infra/robot_env/envs/franka_env
+    # Note that observation_space[state] willb e sorted and set as an ordered dict by SerlObservationWrapper
+    # gripper_pose:0
+    # tcp_force.x: 1
+    # tcp_force.y: 2
+    # tcp_force.z: 3
+    # tcp_pose.x:  4 <-- rel_frame.x points to base.+y
+    # tcp_pose.y:  5 <-- rel_frame.y points to base.+x
+    # tcp_pose.z:  6 <-- rel_frame.z points to base.-z
+    x_obs_idx = np.array([4])
+    y_obs_idx = np.array([5])
+    
     if FLAGS.learner:
         sampling_rng = jax.device_put(sampling_rng, device=sharding.replicate())
         
@@ -393,6 +409,11 @@ def main(_):
             # rlds_logger_path=FLAGS.log_rlds_path,
             type=FLAGS.replay_buffer_type,
             branch_method=FLAGS.branch_method,
+            branching_factor=FLAGS.branching_factor,
+            max_depth=FLAGS.max_depth,
+            max_traj_length=FLAGS.max_traj_length,
+            split_method=FLAGS.split_method,
+            alpha=FLAGS.alpha,
             starting_branch_count=FLAGS.starting_branch_count,
             workspace_width=FLAGS.workspace_width,
             x_obs_idx=x_obs_idx,
@@ -406,6 +427,11 @@ def main(_):
             # rlds_logger_path=FLAGS.log_rlds_path,
             type=FLAGS.replay_buffer_type,
             branch_method=FLAGS.branch_method,
+            branching_factor=FLAGS.branching_factor,
+            max_depth=FLAGS.max_depth,
+            max_traj_length=FLAGS.max_traj_length,
+            split_method=FLAGS.split_method,
+            alpha=FLAGS.alpha,
             starting_branch_count=FLAGS.starting_branch_count,
             workspace_width=FLAGS.workspace_width,
             x_obs_idx=x_obs_idx,
@@ -437,13 +463,14 @@ def main(_):
     elif FLAGS.actor:
         sampling_rng = jax.device_put(sampling_rng, sharding.replicate())
         data_store = QueuedDataStore(2000)  # the queue size on the actor
-        # actor loop
+        
+	# actor loop
         print_green("starting actor loop")
         actor(agent, data_store, env, sampling_rng)
 
     else:
         raise NotImplementedError("Must be either a learner or an actor")
-
+    return
 
 if __name__ == "__main__":
     app.run(main)
