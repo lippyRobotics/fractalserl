@@ -90,11 +90,18 @@ class BinaryRewardClassifierWrapper(gym.Wrapper):
 
     def compute_reward(self, obs):
         if self.reward_classifier_func is not None:
+
+            # Extract the reward as a scalar via .item() and pass to logit
             logit = self.reward_classifier_func(obs).item()
+
+            # Sigmoid will convert logit to a prob. If prob is greater than 0.5, True, but cast to int by * 1.
             return (sigmoid(logit) >= 0.5) * 1
         return 0
 
     def step(self, action):
+        """
+        Step the wrapped env, add classifier success bonus, and terminate on success.
+        """
         obs, rew, done, truncated, info = self.env.step(action)
         success = self.compute_reward(obs)
         rew += success

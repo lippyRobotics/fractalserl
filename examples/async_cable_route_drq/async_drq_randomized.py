@@ -127,6 +127,11 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
             done = False
             start_time = time.time()
             while not done:
+                # Use deterministic action selection for evaluation.
+                # `argmax=True` tells the agent to pick the highest-value
+                # / highest-probability action instead of sampling stochastically.
+                # This produces consistent, reproducible evaluation metrics
+                # (success rate and completion time) by removing exploration noise.
                 actions = agent.sample_actions(
                     observations=jax.device_put(obs),
                     argmax=True,
@@ -158,27 +163,42 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
         wait_for_server=True,
     )
 
-    # Function to update the agent with new params
+    # Learner pushes new network parameters; keep this actor's policy in sync.
     def update_params(params):
+        """Replace only model parameters while preserving the rest of agent state."""
         nonlocal agent
         agent = agent.replace(state=agent.state.replace(params=params))
 
+    # registers update_params as the handler for incoming network parameter 
+    # messages from the learner. When an update arrives, update_params(params) 
+    # runs and swaps in new model weights
     client.recv_network_callback(update_params)
 
+    # Initialize first rollout episode.
     obs, _ = env.reset()
     done = False
 
     # training loop
     timer = Timer()
     running_return = 0.0
+
+    # Trigger a full robot joint reset during reset, not just a normal episode reset.
+    # FrankaEnv.reset()->go_to_rest(joint_reset=joint_reset)->/jointreset request to robot_server.reset_joint() on franka server.
+    # Also does a small upward move first.
     env.reset(joint_reset=True)
 
     for step in tqdm.tqdm(range(FLAGS.max_steps), dynamic_ncols=True):
-        timer.tick("total")
+        # Start manual 'total' stopwatch
+        timer.tick("total") 
 
+        # Start automatic 'sample_actions' logging:
         with timer.context("sample_actions"):
+
+            # Collect random steps to bootstrap the replay buffer. Initial policy poor.
             if step < FLAGS.random_steps:
                 actions = env.action_space.sample()
+
+            # Sample actions from agent.
             else:
                 sampling_rng, key = jax.random.split(sampling_rng)
                 actions = agent.sample_actions(
@@ -186,11 +206,13 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
                     seed=key,
                     deterministic=False,
                 )
+                # Move actions from JAX device (GPU/TPU) to host NumPy for Gym env.step.
                 actions = np.asarray(jax.device_get(actions))
 
         # Step environment
         with timer.context("step_env"):
 
+            # Collect tuple info and packet in transition dict
             next_obs, reward, done, truncated, info = env.step(actions)
 
             # override the action with the intervention action
@@ -208,6 +230,8 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
                 masks=1.0 - done,
                 dones=done,
             )
+
+            # Push transition to learner replay buffer
             data_store.insert(transition)
 
             obs = next_obs
@@ -247,15 +271,21 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
     update_steps = 0
 
     def stats_callback(type: str, payload: dict) -> dict:
-        """Callback for when server receives stats request."""
+        """Callback for when server receives stats request.
+        Will log what actor sends via client.request("send-stats", payload).
+        i.e. from RecordEpisodeStatistics, usually info["episode"] = {"r": return, "l": length, "t": elapsed_time}
+        i.e. wrapper flags like left/right from SpacemouseIntervention
+        i.e. Timing stats inside timer: averages for keys like "sample_actions", "step_env", "total" from your Timer
+        Training info and log_period steps are typically captured"""
+
         assert type == "send-stats", f"Invalid request type: {type}"
         if wandb_logger is not None:
             wandb_logger.log(payload, step=update_steps)
         return {}  # not expecting a response
 
-    # Create server
+    # Create the Training server
     server = TrainerServer(make_trainer_config(), request_callback=stats_callback)
-    server.register_data_store("actor_env", replay_buffer)
+    server.register_data_store("actor_env", replay_buffer)                          # Learner registers where incoming actor data should go:
     server.start(threaded=True)
 
     # Loop to wait until replay_buffer is filled
@@ -266,24 +296,39 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
         position=0,
         leave=True,
     )
+    # Do not start gradient updates until enough actor data has arrived.
     while len(replay_buffer) < FLAGS.training_starts:
         pbar.update(len(replay_buffer) - pbar.n)  # Update progress bar
+    
+        # Advance only by newly added samples since last refresh.
+        pbar.update(len(replay_buffer) - pbar.n)
         time.sleep(1)
     pbar.update(len(replay_buffer) - pbar.n)  # Update progress bar
+    
+    # Final sync so bar reaches the latest replay size before closing.
+    pbar.update(len(replay_buffer) - pbar.n)
     pbar.close()
 
-    # send the initial network to the actor
+    # Initial send: broadcast learner's current params so actors start rollouts with synced weights.
     server.publish_network(agent.state.params)
     print_green("sent initial network to actor")
 
-    # 50/50 sampling from RLPD, half from demo and half from online experience
+    # Build two equal-size iterators: one for online actor data and one for demos.
+    # Each learner step concatenates these batches for 50/50 mixed training.
     replay_iterator = replay_buffer.get_iterator(
         sample_args={
+            # Half batch from online replay; the other half comes from demo_iterator.
             "batch_size": FLAGS.batch_size // 2,
+            # Keep (obs, next_obs) together in one packed sample for agent updates.
             "pack_obs_and_next_obs": True,
         },
+        # Pre-shard onto local devices to match replicated learner state.
+        # Will prepare outputs as 'JAX device arrays' ahead of time vs NumPy. 
+        # Results in less host-2-device overhead in hot training loop, fewer shape mismatches, more stable throughput.
         device=sharding.replicate(),
     )
+
+    # Same for demo replay buffer.
     demo_iterator = demo_buffer.get_iterator(
         sample_args={
             "batch_size": FLAGS.batch_size // 2,
@@ -294,35 +339,52 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
 
     # wait till the replay buffer is filled with enough data
     timer = Timer()
+
+    # Main learner loop
     for step in tqdm.tqdm(range(FLAGS.max_steps), dynamic_ncols=True, desc="learner"):
+
         # run n-1 critic updates and 1 critic + actor update.
         # This makes training on GPU faster by reducing the large batch transfer time from CPU to GPU
         for critic_step in range(FLAGS.critic_actor_ratio - 1):
+
             with timer.context("sample_replay_buffer"):
-                batch = next(replay_iterator)
+                batch      = next(replay_iterator)
                 demo_batch = next(demo_iterator)
+                
                 batch = concat_batches(batch, demo_batch, axis=0)
 
             with timer.context("train_critics"):
+                # agent: updates the learner agent state (new critic params, targets, rng state, etc.).
+                # critis_info: contains logging metrics from that critic update (e.g., critic losses/stats).
                 agent, critics_info = agent.update_critics(
                     batch,
                 )
 
+        # Run utd "full update" steps (critic + actor + temperature). Actor weights not yet sent.       
         with timer.context("train"):
-            batch = next(replay_iterator)
+            batch      = next(replay_iterator)
             demo_batch = next(demo_iterator)
             batch = concat_batches(batch, demo_batch, axis=0)
             agent, update_info = agent.update_high_utd(batch, utd_ratio=1)
 
-        # publish the updated network
+        # publish the updated network to the actor.
         if step > 0 and step % (FLAGS.steps_per_update) == 0:
+
+            # Force synchronization by waiting for pending JAX computations that produce agent.
+            # Key since JAX is asynchronous. Otherwise could publish params before latest updates.
             agent = jax.block_until_ready(agent)
             server.publish_network(agent.state.params)
 
+        # Log {critic/actor/temperature/optimizer} and {timer info:sample_replay_buffer/train_critics/train} info
         if update_steps % FLAGS.log_period == 0 and wandb_logger:
+
+            # Comes from agent.updated_high_utd
             wandb_logger.log(update_info, step=update_steps)
+
+            # Timer class will return replay_buffer/critic avg wall-clock times for sections:
             wandb_logger.log({"timer": timer.get_average_times()}, step=update_steps)
 
+        # Save checkpoint/model
         if FLAGS.checkpoint_period and update_steps % FLAGS.checkpoint_period == 0:
             assert FLAGS.checkpoint_path is not None
             checkpoints.save_checkpoint(
@@ -356,17 +418,28 @@ def main(_):
     env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
     image_keys = [key for key in env.observation_space.keys() if key != "state"]
     if FLAGS.actor:
-        # initialize the classifier and wrap the env
+        # Actor uses a learned binary reward classifier to turn sparse visual success
+        # detection into a runtime reward signal. We require a checkpoint path here
+        # because actor/eval runs depend on classifier inference at every env step.
 
         if FLAGS.reward_classifier_ckpt_path is None:
             raise ValueError("reward_classifier_ckpt_path must be specified for actor")
 
+        # Build classifier model definition, restore its parameters from checkpoint,
+        # and return a jitted function: obs -> success logit.
+        # - key: RNG for model initialization scaffolding before checkpoint restore.
+        # - sample: example observation to initialize classifier parameter shapes.
+        # - image_keys: camera streams consumed by the classifier encoder.
+        # - checkpoint_path: directory containing saved classifier checkpoints.
         reward_func = load_classifier_func(
             key=sampling_rng,
             sample=env.observation_space.sample(),
             image_keys=image_keys,
             checkpoint_path=FLAGS.reward_classifier_ckpt_path,
         )
+        
+        # Inject classifier-based reward computation into env.step(...):
+        # wrapper thresholds classifier logits into binary success and adds it to reward.
         env = BinaryRewardClassifierWrapper(env, reward_func)
     env = RecordEpisodeStatistics(env)
 
