@@ -147,7 +147,6 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
 
         match self.split_method:
             case "time":
-                self._handle_method_arg_("max_depth", "split_method", self.split_method, kwargs)
                 self._handle_method_arg_("max_traj_length", "split_method", self.split_method, kwargs)
                 self._handle_method_arg_("alpha", "split_method", self.split_method, kwargs)
                 
