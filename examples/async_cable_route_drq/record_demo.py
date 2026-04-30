@@ -88,6 +88,7 @@ if __name__ == "__main__":
                 transitions += batch
                 success_count += 1
             total_count += 1
+            batch.clear()
             print(
                 f"{rew}\tGot {success_count} successes of {total_count} trials. {success_needed} successes needed."
             )

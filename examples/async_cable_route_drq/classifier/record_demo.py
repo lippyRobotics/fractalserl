@@ -42,11 +42,11 @@ if __name__ == "__main__":
 
     pos_count = 0
     neg_count = 0
-    pos_needed = 0    # Define a positive reward max
-    neg_needed = 3
+    pos_needed = 20   # Define a positive reward max
+    neg_needed = 20
 
     neg_transition_count = 0
-    pos_transition_count = 0 
+    pos_transition_count = 0
 
 
     ## Define Output file and safety checks
@@ -100,8 +100,23 @@ if __name__ == "__main__":
                 f"{neg_needed - neg_count} negative demos left."
             )
             obs, _ = env.reset(pos_reset=False)
+            neg_transition_count = 0
             transition_batch.clear()
 
+    ## Move to positive position | Asks to confirm every 50 steps
+    userInput = "n"
+    while (userInput != "y"):
+        prep_transition_count = 0
+        while prep_transition_count < 50:
+            actions = np.zeros((6,))
+            next_obs, rew, done, truncated, info = env.step(action=actions)
+            if "intervene_action" in info:
+                actions = info["intervene_action"]
+            prep_transition_count += 1
+            print(f"Transition count: {prep_transition_count} / 50")
+        userInput = input("Is the robot in a successful pose? (y/n)")
+
+    env.reset(pos_reset=False)
     ## Record Positive demos
     print("Recording positive demos:\n")
     print("Please put robot in successful pose and press Enter...")
@@ -126,10 +141,13 @@ if __name__ == "__main__":
         transition_batch.append(transition)
         
         obs = next_obs
+        pos_transition_count += 1
+        print(f"pos transitions: {pos_transition_count} | demos completed: {pos_count}")
 
         if done:
             pos_transitions += transition_batch
             pos_count += 1
+            pos_transition_count = 0
 
             print(
                 f"{pos_needed - pos_count} positive demos left."
