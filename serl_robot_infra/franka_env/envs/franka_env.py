@@ -219,13 +219,39 @@ class FrankaEnv(gym.Env):
         return ob, reward, done, False, {}
 
     def compute_reward(self, obs, gripper_action_effective) -> bool:
-        """We are using a sparse reward function."""
+        """
+        compute_reward() computes a sparse reward. A reward of 1 is given when the current pose and the target pose are within a threshold. 
+
+        Modification: originallly this code compared the pose and had a significant weakness: the difference between y-angles could sometimes yield values close to 2pi given that we have +pi and -pi discontinuity relative to the peg-insertion orientation. This led to not picking rewards when they should have been produced. 
+
+        We will not separate position and orientation and compute the angle difference with utility method angle_diff.
+        """
+        
+        # Get cartesian and quaternion pose information
         current_pose = obs["state"]["tcp_pose"]
+        
         # convert from quat to euler first
-        euler_angles = quat_2_euler(current_pose[3:])
-        euler_angles = np.abs(euler_angles)
-        current_pose = np.hstack([current_pose[:3], euler_angles])
-        delta = np.abs(current_pose - self._TARGET_POSE)
+        # euler_angles = quat_2_euler(current_pose[3:])
+        # euler_angles = np.abs(euler_angles)
+        
+        # Get current orientation in euler angles
+        current_euler = quat_2_euler(current_pose[3:])
+
+        # Get target euler
+        target_euler = self._TARGET_POSE[3:]
+
+        # Compute position and orientation deltas
+        pos_delta = np.abs(current_pose[:3] - self._TARGET_POSE[:3])
+
+        rot_delta = self.angle_diff(current_euler,target_euler)
+
+        # Stack position and orientation differences
+        delta = np.hstack([pos_delta,rot_delta])
+        
+        # current_pose = np.hstack([current_pose[:3], euler_angles])        
+        # delta = np.abs(current_pose - self._TARGET_POSE)
+
+        # If difference meets threshold produce reward
         if np.all(delta < self._REWARD_THRESHOLD):
             reward = 1
         else:
@@ -437,3 +463,6 @@ class FrankaEnv(gym.Env):
             "tcp_torque": self.currtorque,
         }
         return copy.deepcopy(dict(images=images, state=state_observation))
+
+    def angle_diff(self,a,b):
+        return np.abs((a-b+np.pi)%(2*np.pi) - np.pi)
