@@ -425,7 +425,9 @@ def main(_):
 
     # create env and load dataset
     env = gym.make(
-        FLAGS.env, fake_env=FLAGS.learner, save_video=FLAGS.eval_checkpoint_step
+        FLAGS.env, 
+        fake_env=FLAGS.learner, 
+        save_video=FLAGS.eval_checkpoint_step
     )
     if FLAGS.actor:
         env = SpacemouseIntervention(env)
