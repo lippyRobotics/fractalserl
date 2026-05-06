@@ -1,4 +1,4 @@
-# FractalSym — Fractal Symmetries for Sample-Efficient Robotic Learning
+# FractalSerl — Fractal Symmetries for Sample-Efficient Robotic Learning
 
 [![Discord](https://img.shields.io/discord/1302866684612444190?label=Join%20Us%20on%20Discord&logo=discord&color=7289da)](https://discord.com/invite/bAxjvvJzNM)
 [![Notion](https://img.shields.io/badge/Notion-Workspace-000000?logo=notion&logoColor=white)](https://lipscomb-robotics.notion.site/?source=copy_link)
@@ -13,6 +13,10 @@ Short description
 
 FractalSERL implements Branched Euclidean Group Fractal Symmetries — a trajectory-level augmentation framework that accelerates policy learning by iteratively applying affine and Euclidean-group transformations to episodic trajectories. Treating an episodic MDP as a tree of state–action pairs, self-similar branching produces fractal symmetry expansions that populate replay buffers with diverse, consistent experiences. We demonstrate improvements on simulated and real Franka manipulation tasks, achieving robust policies in as little as 14 minutes (avg. ~20 minutes) of wall-clock training.
 
+Contributions in this repo include:
+- TODO
+- TODO
+
 <figure>
       <img src="docs/images/fetch_rewards_function_grid_size.png" alt="SymmGrid returns as a function of grid size" width="100%">
 </figure>
@@ -21,33 +25,16 @@ FractalSERL implements Branched Euclidean Group Fractal Symmetries — a traject
       <img src="docs/images/fractal_grid.png" alt="Fractal grid enclosed by the blue blobs" width="100%">
 </figure>
 
-Contributions in this repo include:
-- TODO
-- TODO
-
-Folder format (overview)
-------------------------
-
-This project is organized into several top-level folders. Short descriptions are shown below.
-
-| Folder | Description |
-|---|---|
-| `docs/` | Project documentation and tutorials (installation, usage, architecture). |
-| `demos/` | Demo scripts, recorded demonstrations, and env loggers. |
-| `examples/` | Example training/evaluation scripts and small experiments. |
-| `franka_sim/` | Simulation environments, controllers, and MuJoCo/Gym integration for Franka Robot Arm. |
-| `serl_launcher/` | Launch scripts, agents, networks, and utilities for running experiments at scale. |
-| `serl_robot_infra/` | Real-robot integration: servers, drivers, camera interfaces, and gripper control. |
-
 Links to docs
 --------------
 
 The `docs/` folder contains additional Markdown files with step-by-step guides. Quick links are provided below:
 
-- [Installation guide](docs/installation.md)
 - [Overview of code structure](docs/overview.md)
-- [Run in simulation (Quick Start)](docs/run_sim.md)
+- [Installation guide](docs/installation.md)
+- [Run in simulation](docs/run_sim.md)
 - [Run on the real robot](docs/run_realrobot.md)
+
 
 Quick start (very short)
 ------------------------
