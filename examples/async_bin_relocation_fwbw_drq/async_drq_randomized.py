@@ -24,6 +24,7 @@ from agentlace.trainer import TrainerServer, TrainerClient
 from agentlace.data.data_store import QueuedDataStore
 
 from serl_launcher.utils.launcher import (
+    make_replay_buffer,
     make_drq_agent,
     make_trainer_config,
     make_wandb_logger,
@@ -53,6 +54,16 @@ flags.DEFINE_integer("critic_actor_ratio", 4, "critic to actor update ratio.")
 
 flags.DEFINE_integer("max_steps", 1000000, "Maximum number of training steps.")
 flags.DEFINE_integer("replay_buffer_capacity", 200000, "Replay buffer capacity.")
+
+# replay buffer flags (fractal symmetry support)
+flags.DEFINE_string("replay_buffer_type", "memory_efficient_replay_buffer", "Which replay buffer to use")
+flags.DEFINE_integer("branching_factor", None, "Factor by which branch count is changed")
+flags.DEFINE_integer("max_depth", None, "Maximum number of splits that may occur in one episode")
+flags.DEFINE_string("branch_method", "constant", "Method for how many branches to generate")
+flags.DEFINE_string("split_method", "never", "Method for when to change number of branches")
+flags.DEFINE_float("alpha", 0.2, "Rate of change of max_traj_length")
+flags.DEFINE_float("workspace_width", 0.5, "Workspace width in meters")
+flags.DEFINE_integer("starting_branch_count", 27, "Initial number of branches")
 
 flags.DEFINE_integer("random_steps", 300, "Sample random actions for this many steps.")
 flags.DEFINE_integer("training_starts", 300, "Training starts after this step.")
@@ -425,7 +436,9 @@ def main(_):
 
     # create env and load dataset
     env = gym.make(
-        FLAGS.env, fake_env=FLAGS.learner, save_video=FLAGS.eval_checkpoint_step
+        FLAGS.env, 
+        fake_env=FLAGS.learner, 
+        save_video=FLAGS.eval_checkpoint_step
     )
     if FLAGS.actor:
         env = SpacemouseIntervention(env)
@@ -503,18 +516,50 @@ def main(_):
             jax.tree.map(jnp.array, agent), sharding.replicate()
         )
 
+    ## Set indices to be transformed by fractal class for serl_robot_infra/franka_env/envs/franka_env
+    # observation_space[state] is sorted into an OrderedDict by SERLObsWrapper:
+    # gripper_pose:0
+    # tcp_force.x: 1
+    # tcp_force.y: 2
+    # tcp_force.z: 3
+    # tcp_pose.x:  4 <-- rel_frame.x points to base.+y
+    # tcp_pose.y:  5 <-- rel_frame.y points to base.+x
+    # tcp_pose.z:  6 <-- rel_frame.z points to base.-z
+    x_obs_idx = np.array([4])
+    y_obs_idx = np.array([5])
+
     if FLAGS.learner:
         sampling_rng = jax.device_put(sampling_rng, device=sharding.replicate())
-        replay_buffer = MemoryEfficientReplayBufferDataStore(
-            env.observation_space,
-            env.action_space,
+        replay_buffer = make_replay_buffer(
+            env,
             capacity=FLAGS.replay_buffer_capacity,
+            type=FLAGS.replay_buffer_type,
+            branch_method=FLAGS.branch_method,
+            branching_factor=FLAGS.branching_factor,
+            max_depth=FLAGS.max_depth,
+            max_traj_length=FLAGS.max_traj_length,
+            split_method=FLAGS.split_method,
+            alpha=FLAGS.alpha,
+            starting_branch_count=FLAGS.starting_branch_count,
+            workspace_width=FLAGS.workspace_width,
+            x_obs_idx=x_obs_idx,
+            y_obs_idx=y_obs_idx,
             image_keys=image_keys,
         )
-        demo_buffer = MemoryEfficientReplayBufferDataStore(
-            env.observation_space,
-            env.action_space,
+        demo_buffer = make_replay_buffer(
+            env,
             capacity=5000,
+            type=FLAGS.replay_buffer_type,
+            branch_method=FLAGS.branch_method,
+            branching_factor=FLAGS.branching_factor,
+            max_depth=FLAGS.max_depth,
+            max_traj_length=FLAGS.max_traj_length,
+            split_method=FLAGS.split_method,
+            alpha=FLAGS.alpha,
+            starting_branch_count=FLAGS.starting_branch_count,
+            workspace_width=FLAGS.workspace_width,
+            x_obs_idx=x_obs_idx,
+            y_obs_idx=y_obs_idx,
             image_keys=image_keys,
         )
         import pickle as pkl

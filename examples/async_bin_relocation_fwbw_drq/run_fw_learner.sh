@@ -11,6 +11,15 @@ python async_drq_randomized.py "$@" \
     --batch_size 256 \
     --eval_period 2000 \
     --encoder_type resnet-pretrained \
+    --replay_buffer_type fractal_symmetry_replay_buffer \
+    --replay_buffer_capacity 3_600_000 \
+    --starting_branch_count 27 \
+    --branch_method "constant" \
+    --split_method "never" \
+    --alpha 0.2 \
+    --max_depth 3 \
+    --branching_factor 3 \
+    --workspace_width 0.3 \
     --fwbw fw \
     --demo_path ./demos/fw_bin_2000_demo_2024-01-23_18-49-56.pkl \
     --checkpoint_period 1000 \
