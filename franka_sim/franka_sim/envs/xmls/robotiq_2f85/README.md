@@ -31,3 +31,9 @@ description](https://github.com/ros-industrial/robotiq/tree/kinetic-devel/roboti
 ## License
 
 This model is released under a [BSD-2-Clause License](LICENSE).
+
+Navigation
+----------
+- [Franka Sim README](../../../../../franka_sim/README.md)
+- [Home](../../../../../README.md)
+- [Overview](../../../../../docs/overview.md)

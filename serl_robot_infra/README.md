@@ -100,3 +100,11 @@ env = gym.make("FrankaEnv-Vision-v0")
 4. bin relocation
 
 Please refer to their respective examples in `serl/examples/` directory.
+
+Navigation
+----------
+- [Home](../README.md)
+- [Overview](../docs/overview.md)
+- [Installation guide](../docs/installation.md)
+- [Run in simulation](../docs/run_sim.md)
+- [Run on the real robot](../docs/run_realrobot.md)
