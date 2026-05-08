@@ -1,9 +1,6 @@
 # Collecting Demonstrations 
-<!-- 
-The `demos/` folder contains utilities to **collect and record human teleoperated demonstrations** in simulation. These recordings can be:
-- Used as initialization data for behavior cloning (See [Training options](sim_training.md) → Option 3)
-- Saved and replayed for inspection
-- Logged in standard RLDS format for compatibility with other learning frameworks
+
+The `demos/` folder contains utilities to **collect and record human teleoperated demonstrations** in simulation. 
 
 ---
 
@@ -22,14 +19,6 @@ python demos/demos/franka_reach_demo_script.py
 ```bash
 python demos/demos/franka_pick_n_place_demo_script.py
 ```
-
-### Demo script behavior:
-
-- **Recording:** State, image, and action transitions are automatically recorded
-- **Saving:** Trajectories are saved to a default location (configurable in script)
-- **Key bindings:** Depend on the specific script (see script comments for details)
-- **Episode length:** Limited to 100 steps per episode
-
 ---
 
 ## Keyboard controls
@@ -72,14 +61,14 @@ save_demos(trajectories, '/path/to/new/demo/file.pkl')
 
 Once you have collected demonstrations, use them to initialize behavior cloning:
 
-### Option 1: Direct BC initialization
+<!-- ### Option 1: Direct BC initialization -->
 
 ```bash
 cd examples/async_drq_sim
 bash run_learner.sh --demo_path /path/to/your/demos.pkl
 ```
 
-### Option 2: RLDS format (recommended)
+<!-- ### Option 2: RLDS format (recommended)
 
 For better compatibility with other frameworks, convert to RLDS format:
 
@@ -94,31 +83,13 @@ Then load with:
 ```bash
 cd examples/async_drq_sim
 bash run_learner.sh --preload_rlds_path /path/to/rlds/output
-```
+``` -->
 
----
-
-## Demo structure (what gets recorded)
-
-Each demo trajectory contains:
-
-```
-{
-  'observations': array of shape (T, obs_dim),  # State or image observations
-  'actions': array of shape (T, 3),              # 3D delta end-effector movements
-  'rewards': array of shape (T,),                # Task rewards
-  'terminals': array of shape (T,),              # Episode termination flags
-  'truncations': array of shape (T,),            # Time limit flags (100 steps)
-}
-```
-
-Where `T` is the trajectory length (typically ≤ 100 steps).
-
----
-
-## Next steps
-
-- **Using demos for training?** See [Training options](sim_training.md) → Option 3 (DRQ+BC).
-- **Saving to standard format?** See [Saving and loading data](sim_data.md).
-- **Troubleshooting?** See [Advanced training](sim_advanced.md).
-- **Back to main guide?** See [run_sim.md](run_sim.md). -->
+Navigation
+----------
+- [Home](../README.md)
+- [Overview](overview.md)
+- [Installation guide](installation.md)
+- [Run in simulation](run_sim.md)
+- [Training options](sim_training.md)
+- [Run on the real robot](run_realrobot.md)

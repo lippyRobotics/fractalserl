@@ -1,13 +1,12 @@
 # Run with Franka Arm on Real Robot
 
-We demonstrate how to use SERL with real robot manipulators with 4 different tasks. Namely: Peg Insertion, PCB Component Insertion, Cable Routing, and Object Relocation. We provide detailed instruction on how to reproduce the Peg Insertion task as a setup test for the entire SERL package.
 
 When running with a real robot, a separate gym env is needed. For our examples, we isolated the gym env as a client to a robot server. The robot server is a Flask server that sends commands to the robot via ROS. The gym env communicates with the robot server via post requests.
 
 ![](./images/robot_infra_interfaces.png)
 
 
-### Installation for `serl_robot_infra`
+### Installation for `serl_franka_controllers`
 
 Follow the [README](../serl_robot_infra/README.md) in `serl_robot_infra` for installation and basic robot operation instructions. This contains the instruction for installing the impendence-based [serl_franka_controllers](https://github.com/rail-berkeley/serl_franka_controllers).
 
@@ -17,7 +16,6 @@ After the installation, you should be able to run the robot server, interact wit
 
 ## 1. Peg Insertion 📍
 
-![](./images/peg.png)
 
 > Example is located in [examples/async_peg_insert_drq/](../examples/async_peg_insert_drq/)
 
@@ -74,39 +72,8 @@ env = RecordEpisodeStatistics(env) # record episode statistics
 ```
 
 
-### 2. PCB Component Insertion 🖥️
+### 2. Cable Routing 🔌
 
-![](./images/pcb.png)
-
-> Example is located in [examples/async_pcb_insert_drq/](../examples/async_pcb_insert_drq/)
-
-> Env and default config are located in `serl_robot_infra/franka_env/envs/pcb_env/`
-
-Similar to peg insertion task, we define the reward in this task is given by checking whether the end-effector pose matches a fixed target pose. Update the `TARGET_POSE` in [peg_env/config.py](../serl_robot_infra/franka_env/envs/peg_env/config.py) with the measured end-effector pose.
-
-Here we record demo trajectories with the robot, then run the learner and actor nodes.
-```bash
-# record demo trajectories
-python record_demo.py
-
-# run learner and actor nodes
-bash run_learner.sh
-bash run_actor.sh
-```
-
-A baseline of using BC as policy is also provided. To train BC, simply run the following command:
-```bash
-python3 examples/bc_policy.py ....TODO_ADD_ARGS.....
-```
-
-To run the BC policy, simply run the following command:
-```bash
-bash run_bc.sh
-```
-
-### 3. Cable Routing 🔌
-
-![](./images/cable.png)
 
 > Example is located in [examples/async_cable_routing_drq/](../examples/async_cable_routing_drq/)
 
@@ -128,11 +95,9 @@ The reward classifier is used as a gym wrapper `franka_env.envs.wrapper.BinaryRe
 The reward classifier is then used in the BC policy and DRQ policy for the actor node, the path is provided as `--reward_classifier_ckpt_path` argument in `run_bc.sh` and `run_actor.sh`
 
 
-### 4. Object Relocation 🗑️
+### 3. Object Relocation 🗑️
 
-![](./images/forward.png)
 
-![](./images/backward.png)
 
 > Example is located in [examples/async_bin_relocation_fwbw_drq/](../examples/async_bin_relocation_fwbw_drq/)
 
@@ -170,3 +135,14 @@ bash run_actor.sh
 bash run_fw_learner.sh
 bash run_bw_learner.sh
 ```
+
+Navigation
+----------
+- [Home](../README.md)
+- [Overview](overview.md)
+- [Installation guide](installation.md)
+- [Run in simulation](run_sim.md)
+- [Run on the real robot](run_realrobot.md)
+- [Quick start](sim_quick_start.md)
+- [Training options](sim_training.md)
+- [Collecting demonstrations](sim_demonstrations.md)

@@ -24,10 +24,18 @@ System design
 Actor node collects data from Gym-compatible environments (sim or real) and push transitions to a datastore/replay buffer; learner node consumes that data to update policies and periodically push updated weights back to actor node. Communication is asynchronous, using `agentlace` in experiments, so collection and learning scale independently.
 
 Key points:
-- Actor node: environment stepping, action sampling, transition senders.
-- Learner node: gradient updates, replay-buffer consumer, policy synchronization.
-- Environment wrappers: `serl_launcher/wrappers/` provide a consistent Gym API across sim and real.
-- Hardware servers: ROS code and hardware commands are located in `serl_robot_infra/robot_servers/`.
+- **Actor node:** environment stepping, action sampling, transition senders.
+- **Learner node:** gradient updates, replay-buffer consumer, policy synchronization.
+- **Environment wrappers:** `serl_launcher/wrappers/` provide a consistent Gym API across sim and real.
+- **Hardware servers:** ROS code and hardware commands are located in `serl_robot_infra/robot_servers/`.
 
+Navigation 
+-----------------------
+- [Home](../README.md)
+- [Installation guide](installation.md)
+- [Run in simulation](run_sim.md)
+- [Run on the real robot](run_realrobot.md)
+- [Training options](sim_training.md)
+- [Collecting demonstrations](sim_demonstrations.md)
 
 

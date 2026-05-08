@@ -11,15 +11,14 @@ For optimal performance and to reproduce the experiments in our paper, we recomm
 - **Processor:** AMD Ryzen Threadripper 1950x or equivalent (16+ cores recommended)
 - **RAM:** 128 GB
 - **GPU:** NVIDIA RTX 4070 (12 GB VRAM) or better
-  - *Note:* Baseline experiments were conducted with an RTX 4090 (82.6 FP32 TFLOPS, 1008 GB/s bandwidth). The RTX 4070 has approximately 2.84× lower FP32 compute (29.1 TFLOPS) and 2× lower bandwidth (504 GB/s), making our results on RTX 4070 all the more significant.
+> **Note:** Baseline experiments were conducted with an RTX 4090 (82.6 FP32 TFLOPS, 1008 GB/s bandwidth). The RTX 4070 has approximately 2.84× lower FP32 compute (29.1 TFLOPS) and 2× lower bandwidth (504 GB/s), making our results on RTX 4070 all the more significant.
 
 ### Software Requirements
 
-- **Operating System:** Ubuntu 20.04 LTS (tested and recommended)
+- **Operating System:** Ubuntu 20.04 LTS
 - Python 3.10
 - Conda (Miniconda or Anaconda)
 - CUDA Toolkit 12.0+ (for GPU support)
-- cuDNN (for GPU support)
 
 > ⚠️ **Note on End-of-Life Support:** Ubuntu 20.04 LTS reaches end-of-standard support in April 2025. If using Ubuntu 20.04 for real-robot applications requiring ROS1, note that ROS1 is also in end-of-life status. For new deployments, consider upgrading to Ubuntu 22.04 LTS with ROS2.
 
@@ -96,19 +95,11 @@ cd ../demos
 pip install -e .
 ```
 
-## Verification - #TODO
-
-To verify that your installation is complete, run:
-
-```bash
-python -c "import jax; print(f'JAX version: {jax.__version__}'); print(f'GPU available: {jax.devices()}')"
-```
-
-If you see your GPU listed, the installation was successful.
-
-## Troubleshooting - #TODO
-
-- **JAX GPU not detected:** Ensure you have CUDA 12.0+ and cuDNN installed. Verify with `nvidia-smi`.
-- **Import errors:** Make sure all packages were installed with `pip install -e .` in editable mode.
-
-For additional help, please open an issue on the [GitHub repository](https://github.com/your-repo-url) or reach out on our Discord.
+Navigation
+----------
+- [Home](../README.md)
+- [Overview](overview.md)
+- [Run in simulation](run_sim.md)
+- [Run on the real robot](run_realrobot.md)
+- [Training options](sim_training.md)
+- [Collecting demonstrations](sim_demonstrations.md)

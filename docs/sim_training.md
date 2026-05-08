@@ -32,16 +32,13 @@ cd examples/async_sac_state_sim
 bash run_actor.sh
 ```
 
-Kill tmux session when done:
-```bash
-tmux kill-session -t serl_session
-```
+
 
 ---
 
 ## Option 2: Image-based DRQ (vision-based policy)
 
-Train using visual observations from camera(s). DRQ (Dreamer with Q-learning) is designed for image-based control.
+Train using visual observations from camera(s). DRQ (Data-Regularized Q-learning) is designed for image-based control.
 
 ### Prerequisites:
 
@@ -110,4 +107,13 @@ bash run_actor.sh
 Don't have pre-recorded demos? Create your own:
 - See [Collecting demonstrations](sim_demonstrations.md) for keyboard teleoperation
 - Save demos and pass with `--demo_path <path>` to the learner
+
+Navigation
+----------
+- [Home](../README.md)
+- [Overview](overview.md)
+- [Installation guide](installation.md)
+- [Run in simulation](run_sim.md)
+- [Collecting demonstrations](sim_demonstrations.md)
+- [Run on the real robot](run_realrobot.md)
 

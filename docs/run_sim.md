@@ -35,4 +35,12 @@ Choose your training approach based on your needs:
 
 - **[Training options](sim_training.md)** — State-based SAC, Image-based DRQ, or DRQ with behavior cloning initialization.
 - **[Collecting demonstrations](sim_demonstrations.md)** — Record human teleoperated demos for initialization or analysis.
-- **[Saving and loading data](sim_data.md)** — Work with RLDS (Robot Learning Data Standard) format for trajectory logging.
+
+Navigation
+----------
+- [Home](../README.md)
+- [Overview](overview.md)
+- [Installation guide](installation.md)
+- [Training options](sim_training.md)
+- [Collecting demonstrations](sim_demonstrations.md)
+- [Run on the real robot](run_realrobot.md)
