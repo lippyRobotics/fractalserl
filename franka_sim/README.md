@@ -20,3 +20,12 @@ It includes a state-based and a vision-based Franka lift cube task environment.
 export MUJOCO_GL=egl
 conda install -c conda-forge libstdcxx-ng
 ```
+
+Navigation
+----------
+- [Home](../README.md)
+- [Overview](../docs/overview.md)
+- [Installation guide](../docs/installation.md)
+- [Quick start](../docs/sim_quick_start.md)
+- [Run in simulation](../docs/run_sim.md)
+- [Training options](../docs/sim_training.md)

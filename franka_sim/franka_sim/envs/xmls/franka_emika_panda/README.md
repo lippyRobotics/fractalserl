@@ -43,3 +43,9 @@ description](https://github.com/frankaemika/franka_ros/tree/develop/franka_descr
 ## License
 
 This model is released under an [Apache-2.0 License](LICENSE).
+
+Navigation
+----------
+- [Franka Sim README](../../../../../franka_sim/README.md)
+- [Home](../../../../../README.md)
+- [Overview](../../../../../docs/overview.md)
