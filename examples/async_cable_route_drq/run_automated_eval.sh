@@ -1,3 +1,4 @@
+# NOT CURRENTLY WORKING
 export CHECKPOINT_EVAL="/home/student/code/serl/examples/async_cable_route_drq/checkpoints" && \
 
 for STEP in 1000 8000 6000 4000 2000 1000; do
