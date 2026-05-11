@@ -17,7 +17,7 @@ python async_drq_randomized.py "$@" \
     --training_starts 1 \
     --critic_actor_ratio 4 \
     --batch_size 256 \
-    --max_steps 8501 \
+    --max_steps 8001 \
     --replay_buffer_type fractal_symmetry_replay_buffer \
     --replay_buffer_capacity 3_600_000 \
     --starting_branch_count 27 \
@@ -28,6 +28,6 @@ python async_drq_randomized.py "$@" \
     --branching_factor 3 \
     --workspace_width 0.3 \
     --encoder_type resnet-pretrained \
-    --demo_path /home/student/code/serl/examples/async_cable_route_drq/demos/fractal_01.pkl \
-    --checkpoint_period 1000 \
+    --demo_path /home/student/code/serl/examples/async_cable_route_drq/demos/fractal_video_01.pkl \
+    --checkpoint_period 500 \
     --checkpoint_path $CHECKPOINT_DIR

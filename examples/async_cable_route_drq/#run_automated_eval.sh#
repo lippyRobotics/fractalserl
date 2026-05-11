@@ -1,0 +1,2 @@
+export CHECKPOINT_EVAL="/home/student/code/serl/examples/async_cable_route_drq/checkpoints" && \
+

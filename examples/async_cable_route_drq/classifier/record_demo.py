@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     pos_count = 0
     neg_count = 0
-    pos_needed = 20   # Define a positive reward max
+    pos_needed = 0   # Define a positive reward max
     neg_needed = 20
 
     neg_transition_count = 0

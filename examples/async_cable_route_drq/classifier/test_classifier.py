@@ -56,9 +56,11 @@ def main(_):
 
         obs = next_obs
 
-        if done:
+        if (i % 3):
             print("Reward: ", rew)
-            obs, _ = env.reset()
+        # if done:
+            # print("Reward: ", rew)
+            # obs, _ = env.reset()
 
 
 if __name__ == "__main__":
