@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SEEDS=5
+SEEDS=1
 # Create a new tmux session
 tmux new-session -d -s serl_session
 tmux setw -g remain-on-exit on

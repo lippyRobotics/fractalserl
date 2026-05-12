@@ -308,6 +308,7 @@ def main(_):
     if FLAGS.env in {"PandaPickCube-v0", "PandaReachCube-v0", "PandaPickSparseCube-v0", "PandaReachSparseCube-v0"}:
         x_obs_idx=np.array([0,4])
         y_obs_idx=np.array([1,5])
+        z_obs_idx=np.array([2,6])
     else:
         raise NotImplementedError(f"Unknown observation layout for {FLAGS.env}")
     
@@ -367,6 +368,7 @@ def main(_):
             max_traj_length=FLAGS.max_traj_length,
             x_obs_idx=x_obs_idx,
             y_obs_idx=y_obs_idx,
+            z_obs_idx=z_obs_idx,
             preload_rlds_path=FLAGS.preload_rlds_path,
             max_depth=FLAGS.max_depth,
             alpha=FLAGS.alpha,
