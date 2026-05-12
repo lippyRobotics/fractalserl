@@ -310,7 +310,7 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
     """
     # set up wandb and logging
     wandb_logger = make_wandb_logger(
-        project="serl_dev",
+        project="202605_obj_relocation",
         description=FLAGS.exp_name or FLAGS.env,
         debug=FLAGS.debug,
     )

@@ -152,13 +152,13 @@ if __name__ == "__main__":
     # save success transitions
     if not args.record_failed_only:
         file_name = (
-            f"fw_bin_relocate_{args.transitions_needed}_front_cam_goal_{uuid}.pkl"
+            f"./fw_classifier_demos/fw_bin_relocate_{args.transitions_needed}_front_cam_goal_{uuid}.pkl"
         )
         with open(file_name, "wb") as f:
             pkl.dump(fw_success_transitions, f)
             print(f"saved {len(fw_success_transitions)} transitions to {file_name}")
         file_name = (
-            f"bw_bin_relocate_{args.transitions_needed}_front_cam_goal_{uuid}.pkl"
+            f"./bw_classifier_demos/bw_bin_relocate_{args.transitions_needed}_front_cam_goal_{uuid}.pkl"
         )
         with open(file_name, "wb") as f:
             pkl.dump(bw_success_transitions, f)
@@ -166,13 +166,13 @@ if __name__ == "__main__":
 
     # save failed transitions
     file_name = (
-        f"fw_bin_relocate_{len(fw_failed_transitions)}_front_cam_failed_{uuid}.pkl"
+        f"./fw_classifier_demos/fw_bin_relocate_{len(fw_failed_transitions)}_front_cam_failed_{uuid}.pkl"
     )
     with open(file_name, "wb") as f:
         pkl.dump(fw_failed_transitions, f)
         print(f"saved {len(fw_failed_transitions)} transitions to {file_name}")
     file_name = (
-        f"bw_bin_relocate_{len(bw_failed_transitions)}_front_cam_failed_{uuid}.pkl"
+        f"./bw_classifier_demos/bw_bin_relocate_{len(bw_failed_transitions)}_front_cam_failed_{uuid}.pkl"
     )
     with open(file_name, "wb") as f:
         pkl.dump(bw_failed_transitions, f)
