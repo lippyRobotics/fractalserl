@@ -14,12 +14,12 @@ class FrankaCableRoute(FrankaEnv):
     def __init__(self, **kwargs):
         super().__init__(**kwargs, config=CableEnvConfig)
 
-    def go_to_rest(self, joint_reset=False):
+    def go_to_rest(self, joint_reset=False, ):
         """
         Move to the rest position defined in base class.
         Add a small z offset before going to rest to avoid collision with object.
         """
-        self._send_gripper_command(-1)
+        # self._send_gripper_command(1) <----- uncomment if picking up cable is part of experiment
         self._update_currpos()
         self._send_pos_command(self.currpos)
         time.sleep(0.5)

@@ -1,34 +1,30 @@
+# All export statements end with && \ to chain them together
 export XLA_PYTHON_CLIENT_PREALLOCATE=false && \
-export XLA_PYTHON_CLIENT_MEM_FRACTION=.5 && \
-export SCRIPT_DIR=$(dirname "$(realpath "$0")") && \
-export ENV_NAME="FrankaPegInsert-Vision-v0" && \
+# XLA memory fraction with learner+action <0.8. Learner needs more.
+export XLA_PYTHON_CLIENT_MEM_FRACTION=.3 && \
+# Use malloc_async to reduce fragmentation, overlap memory allocation with compute, lower stalls and improve worklads. Requires cuda11.2+
+export TF_GPU_ALLOCATOR=cuda_malloc_async && \
 export TIMESTAMP=$(date +"%m-%d-%Y-%H-%M-%S") && \
 export CHECKPOINT_DIR="$SCRIPT_DIR/checkpoints/checkpoints-$TIMESTAMP" && \
-export CHECKPOINT_EVAL="/home/student/code/cleiver/serl/examples/async_peg_insert_drq/checkpoints/checkpoints-07-14-2025-23-15-59" && \
+export CHECKPOINT_EVAL="/home/student/code/serl/examples/async_peg_insert_drq/checkpoints/checkpoints-07-14-2025-23-15-59" && \
 
 
-# Create checkpoint directory if it doesn't exist
-if [ ! -d "$CHECKPOINT_DIR" ]; then
-    echo "Creating checkpoint directory: $CHECKPOINT_DIR"
-    mkdir -p "$CHECKPOINT_DIR" || {
-        echo "Failed to create checkpoint directory!" >&2
-        exit 1
-    }
-fi
+# # Create checkpoint directory if it doesn't exist
+# if [ ! -d "$CHECKPOINT_DIR" ]; then
+#     echo "Creating checkpoint directory: $CHECKPOINT_DIR"
+#     mkdir -p "$CHECKPOINT_DIR" || {
+#         echo "Failed to create checkpoint directory!" >&2
+#         exit 1
+#     }
+# fi
 
 python async_drq_randomized.py "$@" \
     --actor \
     --render \
-    --env $ENV_NAME \
-    --exp_name=serl-peg-insert \
-    --max_steps 25000 \
-    --seed 0 \
+    --env "FrankaPegInsert-Vision-v0" \
     --random_steps 0 \
+    --seed 5 \
     --training_starts 200 \
+    --save_model \
+    --max_steps 15000 \
     --encoder_type resnet-pretrained \
-    --demo_path peg_insert_30_demos_2025-07-14_22-57-59.pkl \
-    --checkpoint_period 1000 \
-    --checkpoint_path "$CHECKPOINT_DIR" \
-    # --eval_checkpoint_step=5000 \
-    # --eval_n_trajs=5 \
-    #--debug # wandb is disabled when debug

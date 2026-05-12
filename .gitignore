@@ -176,3 +176,7 @@ wandb/
 # VS Code settings
 *.code-workspace
 
+# checkpoints
+**/checkpoints/
+**/classifier_checkpoints/
+**/classifier_demos/

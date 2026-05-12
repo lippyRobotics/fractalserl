@@ -11,20 +11,13 @@ class PegEnvConfig(DefaultEnvConfig):
         "wrist_2": "218622271526",
     }
     TARGET_POSE = np.array(
-        [0.6179721091801964,
-        -0.08069386463219706,
-        0.07628962570607248,
-        -3.1161359527499712,
-        0.04124456532930543,
-        1.5939026317635385,
-        ]
-
-    )
+        [0.6140227114814025,-0.08283620130379565,0.07813127975429472,-3.128427831028935,-0.03985221222452284,1.5944114064687414]
+     )
     RESET_POSE = TARGET_POSE + np.array([0.0, 0.0, 0.1, 0.0, 0.0, 0.0])
     REWARD_THRESHOLD: np.ndarray = np.array([0.01, 0.01, 0.01, 0.2, 0.2, 0.2])
     APPLY_GRIPPER_PENALTY = False
     ACTION_SCALE = np.array([0.02, 0.1, 1])
-    RANDOM_RESET = False #Turn to true after basic task is finished
+    RANDOM_RESET = True #Turn to true after basic task is finished
     RANDOM_XY_RANGE = 0.05
     RANDOM_RZ_RANGE = np.pi / 6
     ABS_POSE_LIMIT_LOW = np.array(
@@ -53,10 +46,10 @@ class PegEnvConfig(DefaultEnvConfig):
         "rotational_stiffness": 150,
         "rotational_damping": 7,
         "translational_Ki": 0,
-        "translational_clip_x": 0.003,
+        "translational_clip_x": 0.008, # JR: mod from 0.003 to 0.008 to improve negative motion. But not consistent.
         "translational_clip_y": 0.003,
         "translational_clip_z": 0.01,
-        "translational_clip_neg_x": 0.003,
+        "translational_clip_neg_x": 0.008, # JR: mod from 0.003 to 0.008. improved forward motion.
         "translational_clip_neg_y": 0.003,
         "translational_clip_neg_z": 0.01,
         "rotational_clip_x": 0.02,

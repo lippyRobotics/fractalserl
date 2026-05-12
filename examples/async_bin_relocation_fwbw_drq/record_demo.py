@@ -23,6 +23,7 @@ from serl_launcher.wrappers.chunking import ChunkingWrapper
 if __name__ == "__main__":
     from pynput import keyboard
 
+    #Initializes Enviroment 
     env = gym.make("FrankaBinRelocation-Vision-v0", save_video=False)
     env = SpacemouseIntervention(env)
     env = RelativeFrame(env)

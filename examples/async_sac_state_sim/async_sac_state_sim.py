@@ -27,7 +27,7 @@ from serl_launcher.utils.timer_utils import Timer
 
 import franka_sim
 
-from demos.demoHandling import DemoHandling
+# from demos.demoHandling import DemoHandling
 
 FLAGS = flags.FLAGS
 

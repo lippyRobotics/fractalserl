@@ -1,146 +1,59 @@
-# SymmGrid SERL: Branched Symmetries for Sample-Efficient Robotic Reinforcement Learning
+# FractalSerl — Fractal Symmetries for Sample-Efficient Robotic Learning
 
-<!-- ![](https://github.com/rail-berkeley/serl/workflows/pre-commit/badge.svg) -->
+[![Discord](https://img.shields.io/discord/1302866684612444190?label=Join%20Us%20on%20Discord&logo=discord&color=7289da)](https://discord.com/invite/bAxjvvJzNM)
+[![Notion](https://img.shields.io/badge/Notion-Workspace-000000?logo=notion&logoColor=white)](https://lipscomb-robotics.notion.site/?source=copy_link)
+[![Paper](https://img.shields.io/badge/Paper-Frontiers-blue?logo=zenodo&logoColor=white)](https://www.frontiersin.org/journals/robotics-and-ai/articles/10.3389/frobt.2026.1791812/abstract)
+[![Instagram](https://img.shields.io/badge/Instagram-Follow-E4405F?logo=instagram&logoColor=white)](https://www.instagram.com/lippyrobotics/)
+[![YouTube](https://img.shields.io/badge/YouTube-Channel-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/@lippyrobotics)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-<!-- [![Static Badge](https://img.shields.io/badge/Project-Page-a)](https://serl-robot.github.io/) -->
-<!-- [![Discord](https://img.shields.io/discord/1302866684612444190?label=Join%20Us%20on%20Discord&logo=discord&color=7289da)](https://discord.gg/G4xPJEhwuC) -->
 
 
-<!-- ![](./docs/images/tasks-banner.gif) -->
+Short description
+-----------------
 
-<!-- **Webpage: [https://serl-robot.github.io/](https://serl-robot.github.io/)** -->
+FractalSERL implements Branched Euclidean Group Fractal Symmetries — a trajectory-level augmentation framework that accelerates policy learning by iteratively applying affine and Euclidean-group transformations to episodic trajectories. Treating an episodic MDP as a tree of state–action pairs, self-similar branching produces fractal symmetry expansions that populate replay buffers with diverse, consistent experiences. We demonstrate improvements on simulated and real Franka manipulation tasks, achieving robust policies in as little as 14 minutes (avg. ~20 minutes) of wall-clock training.
 
-
-SymmGrid SERL builds on top of SERL using branched symmetries to accelerate learning in the Sample Efficient Reinforcement Learning frameowork. The latter, as originally stated, provides a set of libraries, env wrappers, and examples to train RL policies for robotic manipulation tasks. In this iteration, we include signficant additions and fixes. 
-
-Note: our work is still in progress and we have only tested in simulation, real robot peg-insertions, and cable-routing. 
-
-The following sections describe how to use SymmGrid and SERL. We will illustrate the usage with examples.
-
-🎬: [Original SERL video](https://www.youtube.com/watch?v=Um4CjBmHdcw), [SERL additional video](https://www.youtube.com/watch?v=17NrtKHdPDw) on sample efficient RL.
-
-**Table of Contents**
-- [SymmGrid SERL: A Software Suite for Sample-Efficient Robotic Reinforcement Learning](#serl-a-software-suite-for-sample-efficient-robotic-reinforcement-learning)
-  - [Installation](#installation)
-  - [Overview and Code Structure](#overview-and-code-structure)
-  - [Quick Start with SERL in Sim](#quick-start-with-serl-in-sim)
-  - [Run with Franka Arm on Real Robot](#run-with-franka-arm-on-real-robot)
-  - [Contribution](#contribution)
-  - [Citation](#citation)
-
-## Major updates
-
-#### March 29, 2026
-SymmGrid SERL has implemented branched and fractal symmetries with an optimized fractal_symmetry_replay_buffer to optimize SERL in simulation, real-robot peg-insert, and cable-routing. We are working to do object relocation and further optimize the code. We are still using ROS1 at this stage. 
-
-#### June 24, 2024
-For people who use SERL for tasks involving controlling the gripper (e.g.,pick up objects), we strong recommend adding a small penalty to the gripper action change, as it will greatly improves the training speed.
-For detail, please refer to: [PR #65](https://github.com/rail-berkeley/serl/pull/65).
+Contributions in this repo include:
+- **SymmGrid Framework**: A preliminary research implementation of fractal symmetry for deep reinforcement learning, demonstrating how branched symmetries accelerate DRL policy learning in physical robots.
+- **Data Augmentation via Super-Scaling**: Efficient robot data generation through trajectory-level augmentation that significantly speeds up policy learning while improving performance and consistency on physical hardware.
+- **Fractal Symmetry Replay Buffer**: An Optimized Datastore and Replay Buffer implementation designed to support parallelized computations and image handling without excessive memory overhead, enabling faster training iterations.
+- **nAUC Performance Metric**: Using normalized Area under the Curve (nAUC) as a trajectory-wide performance metric to capture combined contributions of sample efficiency and policy performance throughout training.
 
 
-Further, we also recommend  providing interventions online during training in addition to loading the offline demos. If you have a Franka robot and SpaceMouse, this can be as easy as just touching the SpaceMouse during training.
+<figure>
+      <img src="docs/images/cable-success-rate-with-robot.png" width="100%">
+</figure>
 
-#### April 25, 2024
-We fixed a major issue in the intervention action frame. See release [v0.1.1](https://github.com/rail-berkeley/serl/releases/tag/v0.1.1) Please update your code with the main branch.
+<!-- <figure>
+      <img src="docs/images/fetch_rewards_function_grid_size.png" alt="SymmGrid returns as a function of grid size" width="100%">
+</figure>
 
-## Installation
-1. **Setup Conda Environment:**
-    create an environment with
-    ```bash
-    conda create -n serl python=3.10
-    ```
+<figure>
+      <img src="docs/images/fractal_grid.png" alt="Fractal grid enclosed by the blue blobs" width="100%">
+</figure> -->
 
-2. **Install Jax as follows:**
-    - For CPU (not recommended):
-        ```bash
-        pip install --upgrade "jax[cpu]"
-        ```
+Navigation
+----------
 
-    - For GPU:
-        ```bash
-        pip install --upgrade "jax[cuda12]==0.6.2"
-        ```
+The `docs/` folder contains additional Markdown files with step-by-step guides. Quick links are provided below:
 
-    - For TPU
-        ```bash
-        pip install --upgrade "jax[tpu]" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-        ```
-    - See the [Jax Github page](https://github.com/google/jax) for more details on installing Jax.
+- [Overview of code structure](docs/overview.md)
+- [Installation guide](docs/installation.md)
+- [Run in simulation](docs/run_sim.md)
+- [Run on the real robot](docs/run_realrobot.md)
 
-3. **Install the serl_launcher**
-    ```bash
-    cd serl_launcher
-    pip install -e .
-    pip install -r requirements.txt
-    ```
 
-4. **Install the franka_sim**
-    ```bash
-    cd franka_sim
-    pip install -e .
-    pip install -r requirements.txt
-    ```
+Quick start (very short)
+------------------------
 
-5. **Install the serl_robot_infra**
-    ```bash
-    cd serl_robot_infra
-    pip install -e .
-    ```
+1. Install dependencies: see `docs/installation.md`.
+2. Run a demo in sim: see `docs/run_sim.md` for instructions to launch `franka_sim`
+3. For real hardware, follow the instructions in `docs/run_realrobot.md` and configure the files related to `serl_robot_infra/`.
 
-6. **Install the demos**
-    ```bash
-    cd demos
-    pip install -e .
-    ```
+Citation
+--------
 
-## Overview and Code Structure
-
-SERL provides a set of common libraries for users to train RL policies for robotic manipulation tasks. The main structure of running the RL experiments involves having an actor node and a learner node, both of which interact with the robot gym environment. Both nodes run asynchronously, with data being sent from the actor to the learner node via the network using [agentlace](https://github.com/youliangtan/agentlace). The learner will periodically synchronize the policy with the actor. This design provides flexibility for parallel training and inference.
-
-<p align="center">
-  <img src="./docs/images/software_design.png" width="80%"/>
-</p>
-
-**Table for code structure**
-
-| Code Directory | Description |
-| --- | --- |
-| [serl_launcher](https://github.com/rail-berkeley/serl/blob/main/serl_launcher) | Main code for SERL |
-| [serl_launcher.agents](https://github.com/rail-berkeley/serl/blob/main/serl_launcher/serl_launcher/agents/) | Agent Policies (e.g. DRQ, SAC, BC) |
-| [serl_launcher.wrappers](https://github.com/rail-berkeley/serl/blob/main/serl_launcher/serl_launcher/wrappers) | Gym env wrappers |
-| [serl_launcher.data](https://github.com/rail-berkeley/serl/blob/main/serl_launcher/serl_launcher/data) | Replay buffer and data store |
-| [serl_launcher.vision](https://github.com/rail-berkeley/serl/blob/main/serl_launcher/serl_launcher/vision) | Vision related models and utils |
-| [franka_sim](./franka_sim) | Franka mujoco simulation gym environment |
-| [serl_robot_infra](./serl_robot_infra/) | Robot infra for running with real robots |
-| [serl_robot_infra.robot_servers](https://github.com/rail-berkeley/serl/blob/main/serl_robot_infra/robot_servers/) | Flask server for sending commands to robot via ROS |
-| [serl_robot_infra.franka_env](https://github.com/rail-berkeley/serl/blob/main/serl_robot_infra/franka_env/) | Gym env for real franka robot |
-
-## Quick Start with SERL in Sim
-
-We provide a simulated environment for trying out SERL with a franka robot.
-
-Check out the [Quick Start with SERL in Sim](/docs/sim_quick_start.md)
- - [Training from state observation example](/docs/sim_quick_start.md#1-training-from-state-observation-example)
- - [Training from image observation example](/docs/sim_quick_start.md#2-training-from-image-observation-example)
- - [Training from image observation with 20 demo trajectories example](/docs/sim_quick_start.md#3-training-from-image-observation-with-20-demo-trajectories-example)
-
-## Run with Franka Arm on Real Robot
-
-We provide a step-by-step guide to run RL policies with SERL on the real Franka robot.
-
-Check out the [Run with Franka Arm on Real Robot](/docs/real_franka.md)
- - [Peg Insertion 📍](/docs/real_franka.md#1-peg-insertion-📍)
- - [PCB Component Insertion 🖥️](/docs/real_franka.md#2-pcb-component-insertion-🖥️)
- - [Cable Routing 🔌](/docs/real_franka.md#3-cable-routing-🔌)
- - [Object Relocation 🗑️](/docs/real_franka.md#4-object-relocation-🗑️)
-
-## Contribution
-
-We welcome contributions to this repository! Fork and submit a PR if you have any improvements to the codebase. Before submitting a PR, please run `pre-commit run --all-files` to ensure that the codebase is formatted correctly.
-
-## Citation
-
-If you use this code for your research, please cite our paper:
+If you use FractalSERL in your research, please cite our paper:
 
 ```bibtex
 @misc{vanderstelt2026SymmGrid,
@@ -148,6 +61,15 @@ If you use this code for your research, please cite our paper:
       author={Ryan Vanderstelt, Cleiver Ruiz Martinez, Caeden Rosen, Blake Hull, and Juan Rojas},
       year={2026},
       eprint={____},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO}
+}
+
+@misc{luo2024serl,
+      title={SERL: A Software Suite for Sample-Efficient Robotic Reinforcement Learning},
+      author={Jianlan Luo and Zheyuan Hu and Charles Xu and You Liang Tan and Jacob Berg and Archit Sharma and Stefan Schaal and Chelsea Finn and Abhishek Gupta and Sergey Levine},
+      year={2024},
+      eprint={2401.16013},
       archivePrefix={arXiv},
       primaryClass={cs.RO}
 }

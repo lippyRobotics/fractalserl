@@ -7,19 +7,17 @@ class CableEnvConfig(DefaultEnvConfig):
 
     SERVER_URL: str = "http://127.0.0.1:5000/"
     REALSENSE_CAMERAS = {
-        "wrist_1": "130322274175",
-        "wrist_2": "127122270572",
+        "wrist_1": "218622274083",
+        "wrist_2": "218622271526",
     }
     TARGET_POSE = np.array(
-        [
-            0.460639895728905,
-            -0.02439473272513422,
-            0.026321125814908725,
-            3.1331234,
-            0.0182487,
-            1.5824805,
-        ]
-    )
+        [0.5712090556314777,
+        0.08195494837073188,
+        -0.027075318869685436,
+        3.1256426554697843,
+        -0.0539225368305436,
+        1.6104289490096944]
+         )
     RESET_POSE = TARGET_POSE + np.array([0.0, 0.0, 0.1, 0.0, 0.0, 0.0])
     REWARD_THRESHOLD: np.ndarray = np.zeros(6)
     APPLY_GRIPPER_PENALTY = False
