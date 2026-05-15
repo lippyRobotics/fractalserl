@@ -174,7 +174,7 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
             obs_state = self.dataset_dict["observations"]["state"]
 
         obs_size = obs_state.shape[-1]
-        total_branches = self.current_branch_count ** 3 # transitions per variable ^ number of variables
+        total_branches = self.current_branch_count ** 2 # transitions per variable ^ number of variables
 
         self.transform_deltas = np.zeros(shape=(total_branches, obs_size), dtype=np.float32)
 
@@ -182,7 +182,7 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
 
         # Translations
         x_deltas, y_deltas = np.divmod(idx, self.current_branch_count)
-        z_deltas = np.divide(idx, self.current_branch_count ** 2)
+        # z_deltas = np.divide(idx, self.current_branch_count ** 2)
 
         x_deltas = (2 * x_deltas + 1) * self.workspace_width / (2 * self.current_branch_count)
         x_deltas = np.repeat(x_deltas, self.x_obs_idx.size)
@@ -194,10 +194,12 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         y_deltas = np.reshape(y_deltas, (total_branches, self.y_obs_idx.size))
         self.transform_deltas[..., self.y_obs_idx] = y_deltas
 
-        z_deltas = (2 * z_deltas + 1) * self.workspace_width / (2 * self.current_branch_count)
-        z_deltas = np.repeat(z_deltas, self.z_obs_idx.size)
-        z_deltas = np.reshape(z_deltas, (total_branches, self.z_obs_idx.size))
-        self.transform_deltas[..., self.z_obs_idx] = z_deltas
+        # z_deltas = (2 * z_deltas + 1) * self.workspace_width / (2 * self.current_branch_count)
+        # z_deltas = np.repeat(z_deltas, self.z_obs_idx.size)
+        # z_deltas = np.reshape(z_deltas, (total_branches, self.z_obs_idx.size))
+        # self.transform_deltas[..., self.z_obs_idx] = z_deltas
+
+        print(self.transform_deltas)
 
         # Rotations (TBD)
 
@@ -321,13 +323,13 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         base_diff = -self.workspace_width/2
         obs[..., self.x_obs_idx] += base_diff
         obs[..., self.y_obs_idx] += base_diff
-        obs[..., self.z_obs_idx] += base_diff
+        # obs[..., self.z_obs_idx] += base_diff
         n_obs[..., self.x_obs_idx] += base_diff
         n_obs[..., self.y_obs_idx] += base_diff
-        n_obs[..., self.z_obs_idx] += base_diff
+        # n_obs[..., self.z_obs_idx] += base_diff
 
         # Transform transitions
-        num_transforms = self.current_branch_count ** 3 # branches per var ^ number of variables
+        num_transforms = self.current_branch_count ** 2 # branches per var ^ number of variables
 
         obs_shape = np.ones(len(obs.shape) + 1, dtype=int)
         obs_shape[0] = num_transforms

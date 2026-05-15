@@ -55,11 +55,11 @@ function run_test {
 
 # CONSTANT TESTING
 
-for starting_branch_count in 9
+for starting_branch_count in 27
 do
     for workspace_width in .5
     do
-        for replay_buffer_capacity in $((10000 * $starting_branch_count * $starting_branch_count * $starting_branch_count))
+        for replay_buffer_capacity in $((5000 * $starting_branch_count * $starting_branch_count))
         do
             ARGS="--run_name new_fancy_thing --replay_buffer_type $REPLAY_BUFFER_TYPE --replay_buffer_capacity $replay_buffer_capacity --workspace_width $workspace_width --branch_method 'constant' --starting_branch_count $starting_branch_count"
             run_test
