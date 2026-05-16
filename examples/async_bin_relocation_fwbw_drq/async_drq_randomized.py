@@ -137,6 +137,7 @@ def actor(
         success_count = {"fw": 0, "bw": 0}
         overall_success_count = 0
         cycle_time = {"fw": [], "bw": []}
+        env.reset(joint_reset=True)
 
         for _ in range(FLAGS.eval_n_trajs):
             for task_id, task_name in id_to_task.items():
@@ -202,7 +203,7 @@ def actor(
     clients["bw"].recv_network_callback(update_params_bw)
 
     env.set_task_id(0)
-    obs, _ = env.reset()
+    obs, _ = env.reset(joint_reset=True)
     done = False
 
     # training loop
