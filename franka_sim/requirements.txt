@@ -2,6 +2,6 @@ dm_env
 mujoco==2.3.7
 gym >= 0.26
 gymnasium
-dm-robotics-transformations
+dm-robotics-transformations==0.9.0
 imageio[ffmpeg]
 lxml
