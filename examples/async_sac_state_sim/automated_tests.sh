@@ -9,7 +9,7 @@ MAX_STEPS=10000
 TRAINING_STARTS=1000
 RANDOM_STEPS=1000
 CRITIC_ACTOR_RATIO=8
-EXP_NAME="DUMMY_TEST"
+EXP_NAME="Z_TEST"
 REPLAY_BUFFER_TYPE="fractal_symmetry_replay_buffer"
 BATCH_SIZE=256
 
@@ -45,23 +45,23 @@ function run_test {
 # BASELINE TESTING
 
 
-# for replay_buffer_capacity in 10000
-# do
-#     ARGS="--run_name baseline --replay_buffer_type replay_buffer  --replay_buffer_capacity $replay_buffer_capacity"
-#     run_test
-# done
+for replay_buffer_capacity in 5000
+do
+    ARGS="--run_name baseline --replay_buffer_type replay_buffer  --replay_buffer_capacity $replay_buffer_capacity"
+    run_test
+done
 
 
 
 # CONSTANT TESTING
 
-for starting_branch_count in 27
+for starting_branch_count in 3 9
 do
-    for workspace_width in .5
+    for workspace_width in .1 .5 .9
     do
-        for replay_buffer_capacity in $((5000 * $starting_branch_count * $starting_branch_count))
+        for replay_buffer_capacity in $((5000 * $starting_branch_count * $starting_branch_count * $starting_branch_count))
         do
-            ARGS="--run_name new_fancy_thing --replay_buffer_type $REPLAY_BUFFER_TYPE --replay_buffer_capacity $replay_buffer_capacity --workspace_width $workspace_width --branch_method 'constant' --starting_branch_count $starting_branch_count"
+            ARGS="--run_name $starting_branch_count*$starting_branch_count*$starting_branch_count --replay_buffer_type $REPLAY_BUFFER_TYPE --replay_buffer_capacity $replay_buffer_capacity --workspace_width $workspace_width --branch_method 'constant' --starting_branch_count $starting_branch_count"
             run_test
         done
     done
