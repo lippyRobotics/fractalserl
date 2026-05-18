@@ -85,7 +85,7 @@ if __name__ == "__main__":
         def check_all_done():
             return (
                 len(fw_failed_transitions) >= args.transitions_needed
-                or len(bw_failed_transitions) >= args.transitions_needed
+                and len(bw_failed_transitions) >= args.transitions_needed
             )
 
     else:
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         def check_all_done():
             return (
                 len(fw_success_transitions) >= args.transitions_needed
-                or len(bw_success_transitions) >= args.transitions_needed
+                and len(bw_success_transitions) >= args.transitions_needed
             )
 
     # Loop until we have enough transitions
