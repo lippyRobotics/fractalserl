@@ -213,7 +213,7 @@ def actor(
     clients["bw"].recv_network_callback(update_params_bw)
 
     env.set_task_id(0)
-    obs, _ = env.reset()
+    obs, _ = env.reset(joint_reset=True)
     done = False
 
     # training loop
