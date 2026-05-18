@@ -38,14 +38,14 @@ if __name__ == "__main__":
         key=key,
         sample=env.front_observation_space.sample(),
         image_keys=image_keys,
-        checkpoint_path="/home/student/code/serl/examples/async_bin_relocation_fwbw_drq/fw_classifier_trained",
+        checkpoint_path="/home/student/code/serl/examples/async_bin_relocation_fwbw_drq/classifier/fw_classifier_trained",
     )
     rng, key = jax.random.split(rng)
     bw_classifier_func = load_classifier_func(
         key=key,
         sample=env.front_observation_space.sample(),
         image_keys=image_keys,
-        checkpoint_path="/home/student/code/serl/examples/async_bin_relocation_fwbw_drq/bw_classifier_trained",
+        checkpoint_path="/home/student/code/serl/examples/async_bin_relocation_fwbw_drq/classifier/bw_classifier_trained",
     )
     env = FWBWFrontCameraBinaryRewardClassifierWrapper(
         env, fw_classifier_func, bw_classifier_func
