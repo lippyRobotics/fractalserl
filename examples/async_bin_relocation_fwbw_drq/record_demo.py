@@ -46,14 +46,14 @@ if __name__ == "__main__":
         key=key,
         sample=env.front_observation_space.sample(),
         image_keys=image_keys,
-        checkpoint_path="/home/student/code/serl/examples/async_bin_relocation_fwbw_drq/fw_classifier_trained",
+        checkpoint_path="/home/student/code/serl/examples/async_bin_relocation_fwbw_drq/classifier/fw_classifier_trained",
     )
     rng, key = jax.random.split(rng)
     bw_classifier_func = load_classifier_func(
         key=key,
         sample=env.front_observation_space.sample(),
         image_keys=image_keys,
-        checkpoint_path="/home/student/code/serl/examples/async_bin_relocation_fwbw_drq/bw_classifier_trained",
+        checkpoint_path="/home/student/code/serl/examples/async_bin_relocation_fwbw_drq/classifier/bw_classifier_trained",
     )
     env = FWBWFrontCameraBinaryRewardClassifierWrapper(
         env, fw_classifier_func, bw_classifier_func
@@ -67,8 +67,8 @@ if __name__ == "__main__":
     bw_pbar = tqdm(total=transitions_needed, desc="bw")
 
     uuid = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    fw_file_name = f"fw_bin_demo_{uuid}.pkl"
-    bw_file_name = f"bw_bin_demo_{uuid}.pkl"
+    fw_file_name = f"./demos/fw_demos/fw_bin_demo_{uuid}.pkl"
+    bw_file_name = f"./demos/bw_demos/bw_bin_demo_{uuid}.pkl"
     file_dir = os.path.dirname(os.path.realpath(__file__))  # same dir as this script
     fw_file_path = os.path.join(file_dir, fw_file_name)
     bw_file_path = os.path.join(file_dir, bw_file_name)
