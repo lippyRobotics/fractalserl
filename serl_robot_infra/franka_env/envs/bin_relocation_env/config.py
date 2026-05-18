@@ -4,7 +4,7 @@ from franka_env.envs.franka_env import DefaultEnvConfig
 
 class BinEnvConfig(DefaultEnvConfig):
     """Set the configuration for FrankaEnv."""
-
+    WAIT_FOR_GRIPPER_SETTLED: bool = True
     SERVER_URL: str = "http://127.0.0.1:5000/"
     REALSENSE_CAMERAS = {
         "wrist_1":  "218622274083",

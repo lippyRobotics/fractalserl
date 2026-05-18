@@ -62,6 +62,7 @@ class DefaultEnvConfig:
     BINARY_GRIPPER_THREASHOLD: float = 0.5
     APPLY_GRIPPER_PENALTY: bool = True
     GRIPPER_PENALTY: float = 0.1
+    WAIT_FOR_GRIPPER_SETTLED: bool = False
 
 
 ##############################################################################
@@ -76,6 +77,8 @@ class FrankaEnv(gym.Env):
         config: DefaultEnvConfig = None,
         max_episode_length=100,
     ):
+        self.last_gripper_cmd_time = 0.0
+        self.min_gripper_cmd_interval = 1.5
         self.action_scale = config.ACTION_SCALE
         self._TARGET_POSE = config.TARGET_POSE
         self._REWARD_THRESHOLD = config.REWARD_THRESHOLD
@@ -413,28 +416,42 @@ class FrankaEnv(gym.Env):
         requests.post(self.url + "pose", json=data)
 
     def _send_gripper_command(self, pos: float, mode="binary"):
-        """Internal function to send gripper command to the robot."""
-        if mode == "binary":
+        """Send binary gripper command, but rate-limit physical commands."""
+        if mode != "binary":
+            raise NotImplementedError("Continuous gripper control is optional")
+
+        now = time.time()
+
+        # Rate limit physical gripper commands.
+        if now - self.last_gripper_cmd_time < self.min_gripper_cmd_interval:
+            return False
+
+        try:
             if (
                 pos <= -self.config.BINARY_GRIPPER_THREASHOLD
-                # and self.gripper_binary_state == 0
-            ):  # close gripper
-                requests.post(self.url + "close_gripper")
-                time.sleep(0.6)
+                and self.gripper_binary_state == 0
+            ):
+                requests.post(self.url + "close_gripper", timeout=1.0)
                 self.gripper_binary_state = 1
+                self.last_gripper_cmd_time = time.time()
+                time.sleep(0.8)
                 return True
+
             elif (
                 pos >= self.config.BINARY_GRIPPER_THREASHOLD
                 and self.gripper_binary_state == 1
-            ):  # open gripper
-                requests.post(self.url + "open_gripper")
-                time.sleep(0.6)
+            ):
+                requests.post(self.url + "open_gripper", timeout=1.0)
                 self.gripper_binary_state = 0
+                self.last_gripper_cmd_time = time.time()
+                time.sleep(0.8)
                 return True
-            else:  # do nothing to the gripper
-                return False
-        elif mode == "continuous":
-            raise NotImplementedError("Continuous gripper control is optional")
+
+            return False
+
+        except requests.exceptions.RequestException as e:
+            print(f"Gripper command failed: {e}")
+            return False
 
     def _update_currpos(self):
         """
