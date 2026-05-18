@@ -25,8 +25,9 @@ from serl_launcher.utils.launcher import (
     make_drq_agent,
     make_trainer_config,
     make_wandb_logger,
+    make_replay_buffer
 )
-from serl_launcher.data.data_store import MemoryEfficientReplayBufferDataStore
+# from serl_launcher.data.data_store import MemoryEfficientReplayBufferDataStore
 from serl_launcher.wrappers.serl_obs_wrappers import SERLObsWrapper
 from franka_env.envs.relative_env import RelativeFrame
 from franka_env.envs.wrappers import (
@@ -49,7 +50,6 @@ flags.DEFINE_integer("batch_size", 256, "Batch size.")
 flags.DEFINE_integer("critic_actor_ratio", 4, "critic to actor update ratio.")
 
 flags.DEFINE_integer("max_steps", 1000000, "Maximum number of training steps.")
-flags.DEFINE_integer("replay_buffer_capacity", 200000, "Replay buffer capacity.")
 
 flags.DEFINE_integer("random_steps", 300, "Sample random actions for this many steps.")
 flags.DEFINE_integer("training_starts", 300, "Training starts after this step.")
@@ -68,6 +68,17 @@ flags.DEFINE_string("encoder_type", "resnet-pretrained", "Encoder type.")
 flags.DEFINE_string("demo_path", None, "Path to the demo data.")
 flags.DEFINE_integer("checkpoint_period", 0, "Period to save checkpoints.")
 flags.DEFINE_string("checkpoint_path", None, "Path to save checkpoints.")
+
+# replay buffer flags
+flags.DEFINE_string("replay_buffer_type", "memory_efficient_replay_buffer", "Which replay buffer to use")
+flags.DEFINE_integer("replay_buffer_capacity", 200000, "Replay buffer capacity.")
+flags.DEFINE_integer("branching_factor", None, "Factor by which branch count is changed")
+flags.DEFINE_integer("max_depth", None, "Maximum number of splits that may occur in one episode")
+flags.DEFINE_string("branch_method", "constant", "Method for how many branches to generate")
+flags.DEFINE_string("split_method", "never", "Method for when to change number of branches")
+flags.DEFINE_float("alpha", 0.2, "Rate of change of max_traj_length")
+flags.DEFINE_float("workspace_width", 0.3, "Workspace width in meters")
+flags.DEFINE_integer("starting_branch_count", 27, "Initial number of branches")
 
 flags.DEFINE_integer(
     "eval_checkpoint_step", 0, "evaluate the policy from ckpt at this step"
@@ -104,6 +115,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
             step=FLAGS.eval_checkpoint_step,
         )
         agent = agent.replace(state=ckpt)
+        env.reset(joint_reset=True)
 
         for episode in range(FLAGS.eval_n_trajs):
             obs, _ = env.reset()
@@ -127,7 +139,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
 
                     success_counter += reward
                     print(reward)
-                    print(f"{success_counter}/{episode + 1}")
+                    print(f"{success_counter}/{episode + 1} ({success_counter / (episode + 1):.2f})")
 
         print(f"success rate: {success_counter / FLAGS.eval_n_trajs}")
         print(f"average time: {np.mean(time_list)}")
@@ -148,7 +160,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
 
     client.recv_network_callback(update_params)
 
-    obs, _ = env.reset()
+    obs, _ = env.reset(joint_reset=True)
     done = False
 
     # training loop
@@ -217,7 +229,7 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
     """
     # set up wandb and logging
     wandb_logger = make_wandb_logger(
-        project="serl_dev",
+        project=FLAGS.exp_name,
         description=FLAGS.exp_name or FLAGS.env,
         debug=FLAGS.debug,
     )
@@ -325,6 +337,7 @@ def main(_):
         fake_env=FLAGS.learner,
         save_video=FLAGS.eval_checkpoint_step,
     )
+    print(env.observation_space)
     env = GripperCloseEnv(env)
     if FLAGS.actor:
         env = SpacemouseIntervention(env)
@@ -351,20 +364,57 @@ def main(_):
         jax.tree.map(jnp.array, agent), sharding.replicate()
     )
 
+    ## Set indices to be transformed by fractal class for the serl_robot_infra/robot_env/envs/franka_env
+    # Note that observation_space[state] willb e sorted and set as an ordered dict by SerlObservationWrapper
+    # gripper_pose:0
+    # tcp_force.x: 1
+    # tcp_force.y: 2
+    # tcp_force.z: 3
+    # tcp_pose.x:  4 <-- rel_frame.x points to base.+y
+    # tcp_pose.y:  5 <-- rel_frame.y points to base.+x
+    # tcp_pose.z:  6 <-- rel_frame.z points to base.-z
+    x_obs_idx = np.array([4])
+    y_obs_idx = np.array([5])
+    
     if FLAGS.learner:
         sampling_rng = jax.device_put(sampling_rng, device=sharding.replicate())
-        replay_buffer = MemoryEfficientReplayBufferDataStore(
-            env.observation_space,
-            env.action_space,
+        replay_buffer = make_replay_buffer(
+            env,
             capacity=FLAGS.replay_buffer_capacity,
+            # rlds_logger_path=FLAGS.log_rlds_path,
+            type=FLAGS.replay_buffer_type,
+            branch_method=FLAGS.branch_method,
+            branching_factor=FLAGS.branching_factor,
+            max_depth=FLAGS.max_depth,
+            max_traj_length=FLAGS.max_traj_length,
+            split_method=FLAGS.split_method,
+            alpha=FLAGS.alpha,
+            starting_branch_count=FLAGS.starting_branch_count,
+            workspace_width=FLAGS.workspace_width,
+            x_obs_idx=x_obs_idx,
+            y_obs_idx=y_obs_idx,
+            # preload_rlds_path=FLAGS.preload_rlds_path,
             image_keys=image_keys,
         )
-        demo_buffer = MemoryEfficientReplayBufferDataStore(
-            env.observation_space,
-            env.action_space,
-            capacity=10000,
+        demo_buffer = make_replay_buffer(
+            env,
+            capacity=FLAGS.replay_buffer_capacity,
+            # rlds_logger_path=FLAGS.log_rlds_path,
+            type=FLAGS.replay_buffer_type,
+            branch_method=FLAGS.branch_method,
+            branching_factor=FLAGS.branching_factor,
+            max_depth=FLAGS.max_depth,
+            max_traj_length=FLAGS.max_traj_length,
+            split_method=FLAGS.split_method,
+            alpha=FLAGS.alpha,
+            starting_branch_count=FLAGS.starting_branch_count,
+            workspace_width=FLAGS.workspace_width,
+            x_obs_idx=x_obs_idx,
+            y_obs_idx=y_obs_idx,
+            # preload_rlds_path=FLAGS.preload_rlds_path,
             image_keys=image_keys,
         )
+        print(demo_buffer._size)
         import pickle as pkl
 
         with open(FLAGS.demo_path, "rb") as f:
@@ -392,7 +442,7 @@ def main(_):
 
     else:
         raise NotImplementedError("Must be either a learner or an actor")
-
+    return
 
 if __name__ == "__main__":
     app.run(main)

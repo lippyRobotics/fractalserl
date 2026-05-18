@@ -49,6 +49,7 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         
         # Account for images
         self._num_stack = None
+        observation_space = copy.deepcopy(observation_space)
         next_observation_space = None
         if self.img_keys:
             self.img_buffer = {}
@@ -57,9 +58,9 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
                 img_obs_space = observation_space.spaces[k]
                 if self._num_stack is None:
                     self._num_stack = img_obs_space.shape[0]
-                img_buffer_size = ((self.expected_branches + capacity - 1) // self.expected_branches) * (self._num_stack + 1)
+                self.img_buffer_size = ((self.expected_branches + capacity - 1) // self.expected_branches) * (self._num_stack + 1)
                 buffer_shape = list(img_obs_space.shape[1:])
-                buffer_shape.insert(0, img_buffer_size)
+                buffer_shape.insert(0, self.img_buffer_size)
                 self.img_buffer[k] = np.empty(buffer_shape, img_obs_space.dtype)
                 
                 observation_space.spaces[k] = gym.spaces.Box(low=float('-inf'), high=float('inf'), shape=(), dtype=np.int32)
@@ -72,7 +73,7 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
             observation_space=observation_space,
             next_observation_space=next_observation_space,
             action_space=action_space,
-            capacity=capacity,
+            capacity=capacity * self.expected_branches,
         )
 
         self.generate_transform_deltas()
@@ -146,7 +147,6 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
 
         match self.split_method:
             case "time":
-                self._handle_method_arg_("max_depth", "split_method", self.split_method, kwargs)
                 self._handle_method_arg_("max_traj_length", "split_method", self.split_method, kwargs)
                 self._handle_method_arg_("alpha", "split_method", self.split_method, kwargs)
                 
@@ -279,7 +279,7 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
                 self.img_buffer[k][self._img_insert_index_] = observation[k][0, ...]
             else:
                 self.img_buffer[k][self._img_insert_index_] = observation[k]
-        self._img_insert_index_ += 1
+        self._img_insert_index_ = (self._img_insert_index_ + 1) % self.img_buffer_size
 
     def insert(self, data: DatasetDict):
 

@@ -219,13 +219,39 @@ class FrankaEnv(gym.Env):
         return ob, reward, done, False, {}
 
     def compute_reward(self, obs, gripper_action_effective) -> bool:
-        """We are using a sparse reward function."""
+        """
+        compute_reward() computes a sparse reward. A reward of 1 is given when the current pose and the target pose are within a threshold. 
+
+        Modification: originallly this code compared the pose and had a significant weakness: the difference between y-angles could sometimes yield values close to 2pi given that we have +pi and -pi discontinuity relative to the peg-insertion orientation. This led to not picking rewards when they should have been produced. 
+
+        We will not separate position and orientation and compute the angle difference with utility method angle_diff.
+        """
+        
+        # Get cartesian and quaternion pose information
         current_pose = obs["state"]["tcp_pose"]
+        
         # convert from quat to euler first
-        euler_angles = quat_2_euler(current_pose[3:])
-        euler_angles = np.abs(euler_angles)
-        current_pose = np.hstack([current_pose[:3], euler_angles])
-        delta = np.abs(current_pose - self._TARGET_POSE)
+        # euler_angles = quat_2_euler(current_pose[3:])
+        # euler_angles = np.abs(euler_angles)
+        
+        # Get current orientation in euler angles
+        current_euler = quat_2_euler(current_pose[3:])
+
+        # Get target euler
+        target_euler = self._TARGET_POSE[3:]
+
+        # Compute position and orientation deltas
+        pos_delta = np.abs(current_pose[:3] - self._TARGET_POSE[:3])
+
+        rot_delta = self.angle_diff(current_euler,target_euler)
+
+        # Stack position and orientation differences
+        delta = np.hstack([pos_delta,rot_delta])
+        
+        # current_pose = np.hstack([current_pose[:3], euler_angles])        
+        # delta = np.abs(current_pose - self._TARGET_POSE)
+
+        # If difference meets threshold produce reward
         if np.all(delta < self._REWARD_THRESHOLD):
             reward = 1
         else:
@@ -319,7 +345,7 @@ class FrankaEnv(gym.Env):
         # Change to compliance mode
         requests.post(self.url + "update_param", json=self.config.COMPLIANCE_PARAM)
 
-    def reset(self, joint_reset=False, **kwargs):
+    def reset(self, joint_reset=False, pos_reset=True, **kwargs):
         requests.post(self.url + "update_param", json=self.config.COMPLIANCE_PARAM)
         if self.save_video:
             self.save_video_recording()
@@ -328,8 +354,9 @@ class FrankaEnv(gym.Env):
         if self.cycle_count % self.joint_reset_cycle == 0:
             self.cycle_count = 0
             joint_reset = True
-
-        self.go_to_rest(joint_reset=joint_reset)
+        
+        if pos_reset:
+            self.go_to_rest(joint_reset=joint_reset)
         self._recover()
         self.curr_path_length = 0
 
@@ -390,7 +417,7 @@ class FrankaEnv(gym.Env):
         if mode == "binary":
             if (
                 pos <= -self.config.BINARY_GRIPPER_THREASHOLD
-                and self.gripper_binary_state == 0
+                # and self.gripper_binary_state == 0
             ):  # close gripper
                 requests.post(self.url + "close_gripper")
                 time.sleep(0.6)
@@ -436,3 +463,6 @@ class FrankaEnv(gym.Env):
             "tcp_torque": self.currtorque,
         }
         return copy.deepcopy(dict(images=images, state=state_observation))
+
+    def angle_diff(self,a,b):
+        return np.abs((a-b+np.pi)%(2*np.pi) - np.pi)

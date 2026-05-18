@@ -30,9 +30,10 @@ if __name__ == "__main__":
 
     obs, _ = env.reset()
 
+    batch = []
     transitions = []
     success_count = 0
-    success_needed = 30
+    success_needed = 20
     total_count = 0
     pbar = tqdm(total=success_needed)
 
@@ -64,18 +65,22 @@ if __name__ == "__main__":
                 dones=done,
             )
         )
-        transitions.append(transition)
-
+        batch.append(transition)
         obs = next_obs
 
         if done:
-            success_count += rew
+            if rew:
+                transitions += batch
+                success_count += 1
             total_count += 1
+
+            batch.clear()
             print(
                 f"{rew}\tGot {success_count} successes of {total_count} trials. {success_needed} successes needed."
             )
             pbar.update(rew)
             obs, _ = env.reset()
+
 
     with open(file_path, "wb") as f:
         pkl.dump(transitions, f)
