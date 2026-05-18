@@ -121,6 +121,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
             step=FLAGS.eval_checkpoint_step,
         )
         agent = agent.replace(state=ckpt)
+        env.reset(joint_reset=True)
 
         for episode in range(FLAGS.eval_n_trajs):
             obs, _ = env.reset()
@@ -175,17 +176,12 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
     client.recv_network_callback(update_params)
 
     # Initialize first rollout episode.
-    obs, _ = env.reset()
+    obs, _ = env.reset(joint_reset=True)
     done = False
 
     # training loop
     timer = Timer()
     running_return = 0.0
-
-    # Trigger a full robot joint reset during reset, not just a normal episode reset.
-    # FrankaEnv.reset()->go_to_rest(joint_reset=joint_reset)->/jointreset request to robot_server.reset_joint() on franka server.
-    # Also does a small upward move first.
-    env.reset(joint_reset=True)
 
     for step in tqdm.tqdm(range(FLAGS.max_steps), dynamic_ncols=True):
         # Start manual 'total' stopwatch

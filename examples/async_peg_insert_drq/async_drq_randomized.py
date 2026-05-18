@@ -115,6 +115,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
             step=FLAGS.eval_checkpoint_step,
         )
         agent = agent.replace(state=ckpt)
+        env.reset(joint_reset=True)
 
         for episode in range(FLAGS.eval_n_trajs):
             obs, _ = env.reset()

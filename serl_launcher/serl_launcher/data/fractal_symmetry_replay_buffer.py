@@ -73,7 +73,7 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
             observation_space=observation_space,
             next_observation_space=next_observation_space,
             action_space=action_space,
-            capacity=capacity,
+            capacity=capacity * self.expected_branches,
         )
 
         self.generate_transform_deltas()

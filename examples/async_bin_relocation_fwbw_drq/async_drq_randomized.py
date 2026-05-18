@@ -148,6 +148,7 @@ def actor(
         success_count = {"fw": 0, "bw": 0}
         overall_success_count = 0
         cycle_time = {"fw": [], "bw": []}
+        env.reset(joint_reset=True)
 
         for _ in range(FLAGS.eval_n_trajs):
             for task_id, task_name in id_to_task.items():
