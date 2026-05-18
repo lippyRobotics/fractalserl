@@ -1,4 +1,0 @@
-python train_reward_classifier.py --num_epochs 1000 --batch_size 512 \
-    --classifier_ckpt_path ./fw_classifier_trained \
-    --positive_demo_paths ./classifier_demos_fw/S1.pkl \
-    --negative_demo_paths ./classifier_demos_fw/F1.pkl \

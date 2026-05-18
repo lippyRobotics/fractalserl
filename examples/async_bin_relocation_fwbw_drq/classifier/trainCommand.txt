@@ -1,0 +1,36 @@
+python train_reward_classifier.py --num_epochs 1000 --batch_size 512 \
+    --classifier_ckpt_path ./fw_classifier_trained \
+    --positive_demo_paths ./fw_classifier_demos/P1.pkl \
+    --positive_demo_paths ./fw_classifier_demos/P2.pkl \
+    --positive_demo_paths ./fw_classifier_demos/P3.pkl \
+    --positive_demo_paths ./fw_classifier_demos/P4.pkl \
+    --negative_demo_paths ./fw_classifier_demos/N1.pkl \
+    --negative_demo_paths ./fw_classifier_demos/N2.pkl \
+    --negative_demo_paths ./fw_classifier_demos/N3.pkl \
+    --negative_demo_paths ./fw_classifier_demos/N4.pkl \
+    --negative_demo_paths ./fw_classifier_demos/N5.pkl \
+    --negative_demo_paths ./fw_classifier_demos/N6.pkl \
+    --negative_demo_paths ./fw_classifier_demos/N7.pkl \
+    --negative_demo_paths ./fw_classifier_demos/N9.pkl \
+    --negative_demo_paths ./fw_classifier_demos/N10.pkl \
+    --negative_demo_paths ./fw_classifier_demos/N11.pkl \
+    --negative_demo_paths ./fw_classifier_demos/N12.pkl \
+
+
+python train_reward_classifier.py --num_epochs 1000 --batch_size 512 \
+    --classifier_ckpt_path ./bw_classifier_trained \
+    --positive_demo_paths ./bw_classifier_demos/P1.pkl \
+    --positive_demo_paths ./bw_classifier_demos/P2.pkl \
+    --positive_demo_paths ./bw_classifier_demos/P3.pkl \
+    --positive_demo_paths ./bw_classifier_demos/P4.pkl \
+    --negative_demo_paths ./bw_classifier_demos/N1.pkl \
+    --negative_demo_paths ./bw_classifier_demos/N2.pkl \
+    --negative_demo_paths ./bw_classifier_demos/N3.pkl \
+    --negative_demo_paths ./bw_classifier_demos/N4.pkl \
+    --negative_demo_paths ./bw_classifier_demos/N5.pkl \
+    --negative_demo_paths ./bw_classifier_demos/N6.pkl \
+    --negative_demo_paths ./bw_classifier_demos/N7.pkl \
+    --negative_demo_paths ./bw_classifier_demos/N9.pkl \
+    --negative_demo_paths ./bw_classifier_demos/N10.pkl \
+    --negative_demo_paths ./bw_classifier_demos/N11.pkl \
+    --negative_demo_paths ./bw_classifier_demos/N12.pkl
