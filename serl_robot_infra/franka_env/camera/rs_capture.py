@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import pyrealsense2 as rs  # Intel RealSense cross-platform open-source API
 
@@ -9,16 +10,39 @@ class RSCapture:
 
     def __init__(self, name, serial_number, dim=(640, 480), fps=15, depth=False):
         self.name = name
-        assert serial_number in self.get_device_serial_numbers()
         self.serial_number = serial_number
         self.depth = depth
+
+        # Wait for camera to enumerate
+        for _ in range(5):
+            if serial_number in self.get_device_serial_numbers():
+                break
+            time.sleep(1)
+        else:
+            raise RuntimeError(
+                f"Camera {serial_number} ({name}) not found after 5s"
+            )
+
         self.pipe = rs.pipeline()
         self.cfg = rs.config()
         self.cfg.enable_device(self.serial_number)
         self.cfg.enable_stream(rs.stream.color, dim[0], dim[1], rs.format.bgr8, fps)
         if self.depth:
             self.cfg.enable_stream(rs.stream.depth, dim[0], dim[1], rs.format.z16, fps)
-        self.profile = self.pipe.start(self.cfg)
+
+        # Retry a few times before giving up.
+        last_err = None
+        for _ in range(3):
+            try:
+                self.profile = self.pipe.start(self.cfg)
+                break
+            except RuntimeError as e:
+                last_err = e
+                time.sleep(1.0)
+        else:
+            raise RuntimeError(
+                f"pipe.start failed for {name} ({serial_number}) after 3 attempts: {last_err}"
+            )
 
         # Create an align object
         # rs.align allows us to perform alignment of depth frames to others frames

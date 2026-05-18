@@ -19,8 +19,11 @@ class VideoCapture:
 
     def _reader(self):
         while self.enable:
-            time.sleep(0.01)
-            ret, frame = self.cap.read()
+            try:
+                time.sleep(0.01)
+                ret, frame = self.cap.read()
+            except Exception:
+                continue
             if not ret:
                 break
             if not self.q.empty():
