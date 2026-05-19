@@ -21,9 +21,6 @@ from serl_launcher.wrappers.front_camera_wrapper import FrontCameraWrapper
 from serl_launcher.wrappers.chunking import ChunkingWrapper
 
 if __name__ == "__main__":
-    from pynput import keyboard
-
-    #Initializes Enviroment 
     env = gym.make("FrankaBinRelocation-Vision-v0", save_video=False)
     env = SpacemouseIntervention(env)
     env = RelativeFrame(env)
@@ -59,17 +56,21 @@ if __name__ == "__main__":
         env, fw_classifier_func, bw_classifier_func
     )
 
-    transitions_needed = 2000
+    successes_needed = 20
     fw_transitions = []
     bw_transitions = []
+    fw_success_count = 0
+    bw_success_count = 0
+    episode_buffer = []
+    episode_task_id = env.task_id
 
-    fw_pbar = tqdm(total=transitions_needed, desc="fw")
-    bw_pbar = tqdm(total=transitions_needed, desc="bw")
+    fw_pbar = tqdm(total=successes_needed, desc="fw successes")
+    bw_pbar = tqdm(total=successes_needed, desc="bw successes")
 
     uuid = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    fw_file_name = f"./demos/fw_demos/fw_bin_demo_{uuid}.pkl"
-    bw_file_name = f"./demos/bw_demos/bw_bin_demo_{uuid}.pkl"
-    file_dir = os.path.dirname(os.path.realpath(__file__))  # same dir as this script
+    fw_file_name = f"fw_bin_demo_{successes_needed}_episodes_{uuid}.pkl"
+    bw_file_name = f"bw_bin_demo_{successes_needed}_episodes_{uuid}.pkl"
+    file_dir = os.path.dirname(os.path.realpath(__file__))
     fw_file_path = os.path.join(file_dir, fw_file_name)
     bw_file_path = os.path.join(file_dir, bw_file_name)
 
@@ -82,10 +83,7 @@ if __name__ == "__main__":
     if not os.access(file_dir, os.W_OK):
         raise PermissionError(f"No permission to write to {file_dir}")
 
-    while (
-        len(fw_transitions) < transitions_needed
-        or len(bw_transitions) < transitions_needed
-    ):
+    while fw_success_count < successes_needed or bw_success_count < successes_needed:
         actions = np.zeros((7,))
         next_obs, rew, done, truncated, info = env.step(action=actions)
         if "intervene_action" in info:
@@ -101,30 +99,55 @@ if __name__ == "__main__":
                 dones=done,
             )
         )
-
-        if env.task_id == 0 and len(fw_transitions) < transitions_needed:
-            fw_transitions.append(transition)
-            fw_pbar.update(1)
-        elif env.task_id == 1 and len(bw_transitions) < transitions_needed:
-            bw_transitions.append(transition)
-            bw_pbar.update(1)
-
+        episode_buffer.append(transition)
         obs = next_obs
 
         if done:
-            print(rew)
+            success = bool(rew)
+            if success and episode_task_id == 0 and fw_success_count < successes_needed:
+                fw_transitions.extend(episode_buffer)
+                fw_success_count += 1
+                fw_pbar.update(1)
+                print(
+                    f"fw success! kept {len(episode_buffer)} transitions "
+                    f"({fw_success_count}/{successes_needed} fw, "
+                    f"{bw_success_count}/{successes_needed} bw)"
+                )
+            elif success and episode_task_id == 1 and bw_success_count < successes_needed:
+                bw_transitions.extend(episode_buffer)
+                bw_success_count += 1
+                bw_pbar.update(1)
+                print(
+                    f"bw success! kept {len(episode_buffer)} transitions "
+                    f"({fw_success_count}/{successes_needed} fw, "
+                    f"{bw_success_count}/{successes_needed} bw)"
+                )
+            else:
+                print(
+                    f"discarded episode (task_id={episode_task_id}, rew={rew}, "
+                    f"len={len(episode_buffer)})"
+                )
+
+            episode_buffer = []
             next_task_id = env.task_graph(env.get_front_cam_obs())
             print(f"transition from {env.task_id} to next task: {next_task_id}")
             env.set_task_id(next_task_id)
+            episode_task_id = next_task_id
             obs, _ = env.reset()
 
     with open(fw_file_path, "wb") as f:
         pkl.dump(fw_transitions, f)
-        print(f"saved {len(fw_transitions)} transitions to {fw_file_path}")
+        print(
+            f"saved {fw_success_count} fw episodes "
+            f"({len(fw_transitions)} transitions) to {fw_file_path}"
+        )
 
     with open(bw_file_path, "wb") as f:
         pkl.dump(bw_transitions, f)
-        print(f"saved {len(bw_transitions)} transitions to {bw_file_path}")
+        print(
+            f"saved {bw_success_count} bw episodes "
+            f"({len(bw_transitions)} transitions) to {bw_file_path}"
+        )
 
     env.close()
     fw_pbar.close()
