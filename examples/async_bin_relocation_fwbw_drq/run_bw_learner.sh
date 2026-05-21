@@ -1,5 +1,5 @@
 export XLA_PYTHON_CLIENT_PREALLOCATE=true && \
-export XLA_PYTHON_CLIENT_MEM_FRACTION=.4 && \
+export XLA_PYTHON_CLIENT_MEM_FRACTION=.5 && \
 export SCRIPT_DIR=$(dirname "$(realpath "$0")") && \
 export TIMESTAMP=$(date +"%m-%d-%Y-%H-%M-%S") && \
 export CHECKPOINT_DIR="$SCRIPT_DIR/checkpoints/bw-$TIMESTAMP" && \
