@@ -16,8 +16,7 @@ python async_drq_randomized.py "$@" \
     --batch_size 256 \
     --eval_period 2000 \
     --encoder_type resnet-pretrained \
-    --replay_buffer_type memory_efficient_replay_buffer \
-    --replay_buffer_capacity 200_000 \
+    --replay_buffer_type fractal_symmetry_replay_buffer \
     --starting_branch_count 27 \
     --branch_method "constant" \
     --split_method "never" \
