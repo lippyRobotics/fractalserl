@@ -10,9 +10,11 @@ class BinEnvConfig(DefaultEnvConfig):
         "wrist_1":  "218622274083",
         "front":    "218622276001",
     }
+    # TARGET_POSE is the center of the two trays relative to the base of the robot
+    # For Lipscomb setup, these numbers make sense
     TARGET_POSE = np.array(
         [
-            0.485,
+            0.5725, #0.485,
             0.025,
             0.047555915476419935,
             3.1331234,
@@ -22,15 +24,17 @@ class BinEnvConfig(DefaultEnvConfig):
     )
     RESET_POSE = TARGET_POSE + np.array([0.0, 0.0, 0.1, 0.0, 0.0, 0.0])
     REWARD_THRESHOLD: np.ndarray = np.zeros(6)
+    APPLY_GRIPPER_PENALTY = False
     ACTION_SCALE = np.array([0.1, 0.2, 1])
     RANDOM_RESET = False
     RANDOM_XY_RANGE = 0.1
     RANDOM_RZ_RANGE = np.pi / 6
+    # All the upper and lower adjustments happen in franka_bin_relocation.py:FrankBinRelocation:30 
     ABS_POSE_LIMIT_LOW = np.array(
         [
-            TARGET_POSE[0] - 0.04,  # back
-            TARGET_POSE[1] - 0.27,  # robot's right
-            TARGET_POSE[2] - 0.06,  # floor
+            TARGET_POSE[0] - 0.1,   # -x axis
+            TARGET_POSE[1] - 0.24,   # -y axis
+            TARGET_POSE[2] - 0.03,   # -z axis
             TARGET_POSE[3] - 0.01,
             TARGET_POSE[4] - 0.01,
             TARGET_POSE[5] - RANDOM_RZ_RANGE,
@@ -38,9 +42,9 @@ class BinEnvConfig(DefaultEnvConfig):
     )
     ABS_POSE_LIMIT_HIGH = np.array(
         [
-            TARGET_POSE[0] + 0.26,  # front
-            TARGET_POSE[1] + 0.22,  # robot's left
-            TARGET_POSE[2] + 0.1,   # ceiling
+            TARGET_POSE[0] + 0.115,   # +x axis
+            TARGET_POSE[1] + 0.185,   # +y axis
+            TARGET_POSE[2] + 0.1,     # +z axis
             TARGET_POSE[3] + 0.01,
             TARGET_POSE[4] + 0.01,
             TARGET_POSE[5] + RANDOM_RZ_RANGE,

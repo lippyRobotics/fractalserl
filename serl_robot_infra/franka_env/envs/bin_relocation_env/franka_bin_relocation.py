@@ -27,9 +27,11 @@ class FrankaBinRelocation(FrankaEnv):
         it uses the intersect_line_bbox function to detect whether the gripper is going to hit the wall
         and clips actions that will lead to collision.
         """
+        # WHY WONT THIS BOX WORK
+        # HELP USSSSSSSSS
         self.inner_safety_box = gym.spaces.Box(
-            self._TARGET_POSE[:3] - np.array([0.07, 0.03, 0.001]),
-            self._TARGET_POSE[:3] + np.array([0.07, 0.03, 0.04]),
+            self._TARGET_POSE[:3] - np.array([0.5, 0.05, 0.5]),
+            self._TARGET_POSE[:3] + np.array([0.5, 0.0, 0.5]),
             dtype=np.float64,
         )
 
