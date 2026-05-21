@@ -61,7 +61,7 @@ class DefaultEnvConfig:
     PRECISION_PARAM: Dict[str, float] = {}
     BINARY_GRIPPER_THREASHOLD: float = 0.5
     APPLY_GRIPPER_PENALTY: bool = True
-    GRIPPER_PENALTY: float = 0.1
+    GRIPPER_PENALTY: float = 0.025
     WAIT_FOR_GRIPPER_SETTLED: bool = False
 
 
