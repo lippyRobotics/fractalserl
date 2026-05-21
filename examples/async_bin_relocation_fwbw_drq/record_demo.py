@@ -68,8 +68,8 @@ if __name__ == "__main__":
     bw_pbar = tqdm(total=successes_needed, desc="bw successes")
 
     uuid = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    fw_file_name = f"fw_bin_demo_{successes_needed}_episodes_{uuid}.pkl"
-    bw_file_name = f"bw_bin_demo_{successes_needed}_episodes_{uuid}.pkl"
+    fw_file_name = f"./demos/fw_demos/fw_bin_demo_{successes_needed}_episodes_{uuid}.pkl"
+    bw_file_name = f"./demos/bw_demos/bw_bin_demo_{successes_needed}_episodes_{uuid}.pkl"
     file_dir = os.path.dirname(os.path.realpath(__file__))
     fw_file_path = os.path.join(file_dir, fw_file_name)
     bw_file_path = os.path.join(file_dir, bw_file_name)
