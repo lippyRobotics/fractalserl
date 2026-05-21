@@ -549,7 +549,7 @@ def main(_):
         )
         demo_buffer = make_replay_buffer(
             env,
-            capacity=5000,
+            capacity=FLAGS.replay_buffer_capacity,
             type=FLAGS.replay_buffer_type,
             branch_method=FLAGS.branch_method,
             branching_factor=FLAGS.branching_factor,
