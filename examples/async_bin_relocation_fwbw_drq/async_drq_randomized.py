@@ -245,7 +245,7 @@ def actor(
                 actions = agents[task_name].sample_actions(
                     observations=jax.device_put(obs),
                     seed=key,
-                    deterministic=False,
+                    argmax=False,
                 )
                 actions = np.asarray(jax.device_get(actions))
 
@@ -448,7 +448,8 @@ def main(_):
     env = SERLObsWrapper(env)
     env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
     env = FrontCameraWrapper(env)
-    image_keys = [key for key in env.observation_space.keys() if key != "state"]
+    # image_keys = [key for key in env.observation_space.keys() if key != "state"]
+    image_keys = [key for key in env.observation_space.keys() if "wrist" in key]
 
     if FLAGS.actor:
         front_image_keys = [
