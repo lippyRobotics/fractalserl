@@ -61,7 +61,7 @@ class DefaultEnvConfig:
     PRECISION_PARAM: Dict[str, float] = {}
     BINARY_GRIPPER_THREASHOLD: float = 0.5
     APPLY_GRIPPER_PENALTY: bool = True
-    GRIPPER_PENALTY: float = 0.025
+    GRIPPER_PENALTY: float = 0.05
     WAIT_FOR_GRIPPER_SETTLED: bool = False
 
 
@@ -250,12 +250,19 @@ class FrankaEnv(gym.Env):
 
         # Stack position and orientation differences
         delta = np.hstack([pos_delta,rot_delta])
-        
-        # current_pose = np.hstack([current_pose[:3], euler_angles])        
+
+        # current_pose = np.hstack([current_pose[:3], euler_angles])
         # delta = np.abs(current_pose - self._TARGET_POSE)
 
+        # An all-zero REWARD_THRESHOLD is the explicit "disabled" sentinel: delta
+        # is non-negative by construction, so no pose could ever satisfy it.
+        # Tasks that source reward elsewhere (e.g. bin relocation, which uses the
+        # FWBW classifier wrapper) leave it zero. Return 0 directly so this path
+        # reads as intentionally inert rather than an accidentally-false compare.
+        if not np.any(self._REWARD_THRESHOLD):
+            reward = 0
         # If difference meets threshold produce reward
-        if np.all(delta < self._REWARD_THRESHOLD):
+        elif np.all(delta < self._REWARD_THRESHOLD):
             reward = 1
         else:
             # print(f'Goal not reached, the difference is {delta}, the desired threshold is {_REWARD_THRESHOLD}')
