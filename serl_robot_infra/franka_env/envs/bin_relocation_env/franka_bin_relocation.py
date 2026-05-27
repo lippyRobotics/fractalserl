@@ -30,8 +30,8 @@ class FrankaBinRelocation(FrankaEnv):
         # WHY WONT THIS BOX WORK
         # HELP USSSSSSSSS
         self.inner_safety_box = gym.spaces.Box(
-            self._TARGET_POSE[:3] - np.array([0.5, 0.05, 0.5]),
-            self._TARGET_POSE[:3] + np.array([0.5, 0.0, 0.5]),
+            self._TARGET_POSE[:3] - np.array([0, 0, 0]),
+            self._TARGET_POSE[:3] + np.array([0, 0, 0]),
             dtype=np.float64,
         )
 
@@ -129,9 +129,11 @@ class FrankaBinRelocation(FrankaEnv):
 
     def reset(self, joint_reset=False, **kwargs):
         if self.task_id == 0:
+            self.resetpos[0] = self._TARGET_POSE[0] + 0.075
             self.resetpos[1] = self._TARGET_POSE[1] + 0.1
         elif self.task_id == 1:
-            self.resetpos[1] = self._TARGET_POSE[1] - 0.1
+            self.resetpos[0] = self._TARGET_POSE[0] + 0.075
+            self.resetpos[1] = self._TARGET_POSE[1] - 0.175
         else:
             raise ValueError(f"Task id {self.task_id} should be 0 or 1")
 
