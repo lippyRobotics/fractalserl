@@ -1,5 +1,5 @@
 export XLA_PYTHON_CLIENT_PREALLOCATE=true && \
-export XLA_PYTHON_CLIENT_MEM_FRACTION=.1 && \
+export XLA_PYTHON_CLIENT_MEM_FRACTION=.15 && \
 python async_drq_randomized.py "$@" \
     --actor \
     --render \
@@ -9,7 +9,7 @@ python async_drq_randomized.py "$@" \
     --max_steps 30_000 \
     --random_steps 0 \
     --encoder_type resnet-pretrained \
-    --replay_buffer_type memory_efficient_replay_buffer \
+    --replay_buffer_type fractal_symmetry_replay_buffer \
     --branch_method "fractal" \
     --split_method "time" \
     --branching_factor 3 \
