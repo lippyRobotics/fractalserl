@@ -325,7 +325,36 @@ def main(_):
     # Route for Sending a pose command
     @webapp.route("/pose", methods=["POST"])
     def pose():
-        pos = np.array(request.json["arr"])
+        # Move Robot Arm to POSE. Accepts both Euler angles and quaternion formats
+        # 
+        # Usage:
+        #   1. With Euler angles (roll, pitch, yaw):
+        #      curl -X POST http://127.0.0.1:5000/pose \
+        #        -H "Content-Type: application/json" \
+        #        -d '{"arr": [x, y, z, roll, pitch, yaw], "format": "euler"}'
+        #
+        #   2. With quaternion (default, backward compatible):
+        #      curl -X POST http://127.0.0.1:5000/pose \
+        #        -H "Content-Type: application/json" \
+        #        -d '{"arr": [x, y, z, qx, qy, qz, qw]}'
+        data = request.json
+        pos = np.array(data["arr"])
+        format_type = data.get("format", "quat")  # default to quaternion for backward compatibility
+
+        if format_type == "euler":
+            # Euler format: [x, y, z, roll, pitch, yaw]
+            if len(pos) != 6:
+                return "Error: Euler format requires 6 elements [x, y, z, roll, pitch, yaw]", 400
+            # Convert Euler angles (xyz convention) to quaternion [qx, qy, qz, qw]
+            r = R.from_euler('xyz', pos[3:])
+            pos = np.concatenate([pos[:3], r.as_quat()])
+        elif format_type == "quat":
+            # Quaternion format: [x, y, z, qx, qy, qz, qw]
+            if len(pos) != 7:
+                return "Error: Quaternion format requires 7 elements [x, y, z, qx, qy, qz, qw]", 400
+        else:
+            return f"Error: Unknown format '{format_type}'. Use 'euler' or 'quat'", 400
+
         print("Moving to", pos)
         robot_server.move(pos)
         return "Moved"
