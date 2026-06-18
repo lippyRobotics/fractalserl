@@ -10,16 +10,14 @@ class BinEnvConfig(DefaultEnvConfig):
         "wrist_1":  "218622274083",
         "front":    "218622276001",
     }
-    # TARGET_POSE is the center of the two trays relative to the base of the robot
-    # For Lipscomb setup, these numbers make sense
     TARGET_POSE = np.array(
         [
-            0.5725, #0.485,
-            -0.025,
-            0.047555915476419935,
-            3.1331234,
-            0.0182487,
-            1.5824805,
+            0.575,
+            0.0,
+            0.0,
+            3.14,
+            0.0,
+            0.015
         ]
     )
     RESET_POSE = TARGET_POSE + np.array([0.0, 0.0, 0.1, 0.0, 0.0, 0.0])
@@ -32,9 +30,9 @@ class BinEnvConfig(DefaultEnvConfig):
     # All the upper and lower adjustments happen in franka_bin_relocation.py:FrankBinRelocation:30 
     ABS_POSE_LIMIT_LOW = np.array(
         [
-            TARGET_POSE[0] - 0.13,   # -x axis
-            TARGET_POSE[1] - 0.24,   # -y axis
-            TARGET_POSE[2] - 0.03,   # -z axis
+            TARGET_POSE[0] - 0.1,      # -x axis
+            TARGET_POSE[1] - 0.14,       # -y axis
+            TARGET_POSE[2] - (-0.005),      # -z axis
             TARGET_POSE[3] - 0.01,
             TARGET_POSE[4] - 0.01,
             TARGET_POSE[5] - RANDOM_RZ_RANGE,
@@ -42,9 +40,9 @@ class BinEnvConfig(DefaultEnvConfig):
     )
     ABS_POSE_LIMIT_HIGH = np.array(
         [
-            TARGET_POSE[0] + 0.15,   # +x axis
-            TARGET_POSE[1] + 0.25,   # +y axis
-            TARGET_POSE[2] + 0.1,     # +z axis
+            TARGET_POSE[0] + 0.1,       # +x axis
+            TARGET_POSE[1] + 0.14,      # +y axis
+            TARGET_POSE[2] + 0.1,       # +z axis
             TARGET_POSE[3] + 0.01,
             TARGET_POSE[4] + 0.01,
             TARGET_POSE[5] + RANDOM_RZ_RANGE,
@@ -58,7 +56,7 @@ class BinEnvConfig(DefaultEnvConfig):
         "translational_Ki": 0,
         "translational_clip_x": 0.006,
         "translational_clip_y": 0.006,
-        "translational_clip_z": 0.005,
+        "translational_clip_z": 0.008,
         "translational_clip_neg_x": 0.006,
         "translational_clip_neg_y": 0.006,
         "translational_clip_neg_z": 0.005,
