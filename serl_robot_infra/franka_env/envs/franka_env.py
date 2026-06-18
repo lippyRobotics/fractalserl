@@ -441,7 +441,7 @@ class FrankaEnv(gym.Env):
                 requests.post(self.url + "close_gripper", timeout=1.0)
                 self.gripper_binary_state = 1
                 self.last_gripper_cmd_time = time.time()
-                time.sleep(0.8)
+                # time.sleep(0.8)
                 return True
 
             elif (
@@ -451,7 +451,7 @@ class FrankaEnv(gym.Env):
                 requests.post(self.url + "open_gripper", timeout=1.0)
                 self.gripper_binary_state = 0
                 self.last_gripper_cmd_time = time.time()
-                time.sleep(0.8)
+                # time.sleep(0.8)
                 return True
 
             return False
