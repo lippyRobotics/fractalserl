@@ -82,7 +82,7 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         if hasattr(self, value):
             return
         assert value in kwargs.keys(), f"\033[31mERROR: \033[0m{value} must be defined for {method_type} \"{method}\""
-        setattr(FractalSymmetryReplayBuffer, value, kwargs[value])
+        setattr(self, value, kwargs[value])
         del kwargs[value]
 
     def _handle_methods_(self, kwargs):
