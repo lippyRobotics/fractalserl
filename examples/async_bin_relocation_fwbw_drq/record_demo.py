@@ -56,7 +56,7 @@ if __name__ == "__main__":
         env, fw_classifier_func, bw_classifier_func
     )
 
-    successes_needed = 20
+    successes_needed = 30
     fw_transitions = []
     bw_transitions = []
     fw_success_count = 0
