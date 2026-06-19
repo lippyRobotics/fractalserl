@@ -30,9 +30,9 @@ class BinEnvConfig(DefaultEnvConfig):
     # All the upper and lower adjustments happen in franka_bin_relocation.py:FrankBinRelocation:30 
     ABS_POSE_LIMIT_LOW = np.array(
         [
-            TARGET_POSE[0] - 0.1,      # -x axis
-            TARGET_POSE[1] - 0.14,       # -y axis
-            TARGET_POSE[2] - (-0.005),      # -z axis
+            TARGET_POSE[0] - 0.13,      # -x axis
+            TARGET_POSE[1] - 0.17,       # -y axis
+            TARGET_POSE[2] - (-0.0065),      # -z axis
             TARGET_POSE[3] - 0.01,
             TARGET_POSE[4] - 0.01,
             TARGET_POSE[5] - RANDOM_RZ_RANGE,
@@ -40,8 +40,8 @@ class BinEnvConfig(DefaultEnvConfig):
     )
     ABS_POSE_LIMIT_HIGH = np.array(
         [
-            TARGET_POSE[0] + 0.1,       # +x axis
-            TARGET_POSE[1] + 0.14,      # +y axis
+            TARGET_POSE[0] + 0.13,      # +x axis
+            TARGET_POSE[1] + 0.17,      # +y axis
             TARGET_POSE[2] + 0.1,       # +z axis
             TARGET_POSE[3] + 0.01,
             TARGET_POSE[4] + 0.01,
