@@ -126,13 +126,21 @@ class FrankaBinRelocation(FrankaEnv):
         self.task_id = task_id
 
     def reset(self, joint_reset=False, **kwargs):
+        '''
+        Set resest position for end-effector based on TARGET_POSE.
+        Select values for forward and backward policy that maximize
+        your viewing range from global camera.
+
+        This is experiment-setup specific and will depend on where 
+        your global camera is positioned and the size of your trays.
+        '''
         # Forward policy offset
         if self.task_id == 0:
             X_OFFSET_FW = -0.025
             Y_OFFSET_FW = 0.025
             self.resetpos[0] = self._TARGET_POSE[0] + X_OFFSET_FW
             self.resetpos[1] = self._TARGET_POSE[1] + Y_OFFSET_FW
-        # Forward policy offset
+        # Backward policy offset
         elif self.task_id == 1:
             X_OFFSET_BW = 0.2
             Y_OFFSET_BW = 0.05
