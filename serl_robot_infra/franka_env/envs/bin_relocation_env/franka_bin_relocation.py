@@ -157,7 +157,7 @@ class FrankaBinRelocation(FrankaEnv):
         Add a small z offset before going to rest to avoid collision with object.
         """
        # Open gripper
-        self._send_gripper_command(1)
+        self._send_gripper_command(1, reset=True)
         
         # Get current position
         self._update_currpos()

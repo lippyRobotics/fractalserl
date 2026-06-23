@@ -422,7 +422,7 @@ class FrankaEnv(gym.Env):
         data = {"arr": arr.tolist()}
         requests.post(self.url + "pose", json=data)
 
-    def _send_gripper_command(self, pos: float, mode="binary"):
+    def _send_gripper_command(self, pos: float, mode="binary", reset=False):
         """Send binary gripper command, but rate-limit physical commands."""
         if mode != "binary":
             raise NotImplementedError("Continuous gripper control is optional")
@@ -430,7 +430,7 @@ class FrankaEnv(gym.Env):
         now = time.time()
 
         # Rate limit physical gripper commands.
-        if now - self.last_gripper_cmd_time < self.min_gripper_cmd_interval:
+        if now - self.last_gripper_cmd_time < self.min_gripper_cmd_interval and reset == False:
             return False
 
         try:
