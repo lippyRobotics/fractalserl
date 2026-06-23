@@ -35,7 +35,7 @@ if __name__ == "__main__":
     arg_parser.add_argument(
         "--transitions_needed",
         type=int,
-        default=400,
+        default=500,
         help="number of transitions to collect",
     )
     arg_parser.add_argument(
