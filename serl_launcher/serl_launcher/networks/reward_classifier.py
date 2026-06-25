@@ -1,3 +1,4 @@
+import os
 import pickle as pkl
 import jax
 from jax import numpy as jnp
@@ -33,6 +34,7 @@ def create_classifier(
     sample: Dict,
     image_keys: List[str],
     pretrained_encoder_path: str = "./resnet10_params.pkl",
+    use_proprio: bool = False,
 ):
     pretrained_encoder = resnetv1_configs["resnetv1-10-frozen"](
         pre_pooling=True,
@@ -50,7 +52,7 @@ def create_classifier(
     }
     encoder_def = EncodingWrapper(
         encoder=encoders,
-        use_proprio=False,
+        use_proprio=use_proprio,
         enable_stacking=True,
         image_keys=image_keys,
     )
@@ -64,6 +66,21 @@ def create_classifier(
         params=params,
         tx=optax.adam(learning_rate=1e-4),
     )
+
+    if not os.path.exists(pretrained_encoder_path):
+        cached_path = os.path.expanduser("~/.serl/resnet10_params.pkl")
+        if (
+            os.path.basename(pretrained_encoder_path) == "resnet10_params.pkl"
+            and os.path.exists(cached_path)
+        ):
+            pretrained_encoder_path = cached_path
+
+    if not os.path.exists(pretrained_encoder_path):
+        print(
+            f"Warning: pretrained encoder params not found at "
+            f"{pretrained_encoder_path}. Using initialized classifier weights."
+        )
+        return classifier
 
     with open(pretrained_encoder_path, "rb") as f:
         encoder_params = pkl.load(f)

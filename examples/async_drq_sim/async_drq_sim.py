@@ -10,35 +10,35 @@ from absl import app, flags
 from flax.training import checkpoints
 import cv2
 import os
+import sys
 
 from typing import Any, Dict, Optional
 import pickle as pkl
 import gym
 from gym.wrappers.record_episode_statistics import RecordEpisodeStatistics
 
-from serl_launcher.agents.continuous.drq import DrQAgent
-from serl_launcher.common.evaluation import evaluate
 from serl_launcher.utils.timer_utils import Timer
 from serl_launcher.wrappers.chunking import ChunkingWrapper
-from serl_launcher.utils.train_utils import concat_batches
-
-from agentlace.trainer import TrainerServer, TrainerClient
-from agentlace.data.data_store import QueuedDataStore
 
 from serl_launcher.data.data_store import MemoryEfficientReplayBufferDataStore
-from serl_launcher.utils.launcher import (
-    make_drq_agent,
-    make_trainer_config,
-    make_wandb_logger,
-    make_replay_buffer,
-)
 from serl_launcher.wrappers.serl_obs_wrappers import SERLObsWrapper
 
 import franka_sim
 
+_CLASSIFIER_DIR = os.path.join(os.path.dirname(__file__), "classifier")
+if _CLASSIFIER_DIR not in sys.path:
+    sys.path.append(_CLASSIFIER_DIR)
+from sim_classifier_utils import (
+    ClassifierRewardWrapper,
+    configure_jax_cpu_only,
+    infer_image_keys,
+    load_classifier_func,
+    validate_image_keys,
+)
+
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("env", "PandaReachSparseCube-v0", "Name of environment.")
+flags.DEFINE_string("env", "PandaPickCubeVision-v0", "Name of environment.")
 flags.DEFINE_string("agent", "drq", "Name of agent.")
 flags.DEFINE_string("exp_name", None, "Name of the experiment for wandb logging.")
 flags.DEFINE_string("run_name", None, "Name of run for wandb logging")
@@ -91,23 +91,93 @@ flags.DEFINE_boolean(
 
 flags.DEFINE_string("log_rlds_path", None, "Path to save RLDS logs.")
 flags.DEFINE_string("preload_rlds_path", None, "Path to preload RLDS data.")
+flags.DEFINE_bool("dry_run", False, "Build env/agent/replay setup and exit.")
 
-devices = jax.local_devices()
-num_devices = len(devices)
-sharding = jax.sharding.PositionalSharding(devices)
+flags.DEFINE_string("reward_classifier_ckpt_path", None, "Path to reward classifier checkpoint.")
+flags.DEFINE_integer("reward_classifier_ckpt_step", None, "Checkpoint step to restore; if None, use latest.")
+flags.DEFINE_float("reward_classifier_threshold", 0.5, "Sigmoid threshold for success.")
+flags.DEFINE_bool("terminate_on_classifier_success", True, "Terminate episode when classifier says success.")
+flags.DEFINE_bool("zero_env_reward", False, "If true, ignore base environment reward and use only classifier reward.")
+flags.DEFINE_bool("use_classifier_reward", False, "Whether to use classifier-based reward.")
+flags.DEFINE_multi_string("classifier_image_keys", None, "Image keys used by classifier. If None, infer all non-state keys.")
+flags.DEFINE_bool("classifier_use_proprio", False, "Whether classifier uses proprioceptive state.")
+
+devices = None
+num_devices = None
+sharding = None
 
 
 def print_green(x):
     return print("\033[92m {}\033[00m".format(x))
 
 
+def concat_batches(offline_batch, online_batch, axis=0):
+    return jax.tree.map(
+        lambda x, y: jnp.concatenate([x, y], axis=axis), offline_batch, online_batch
+    )
+
+
 ##############################################################################
 
 
-def actor(agent: DrQAgent, data_store, env, sampling_rng):
+VISION_ENVS = {
+    "PandaPickCubeVision-v0",
+    "PandaReachCubeVision-v0",
+    "PandaPickSparseCubeVision-v0",
+    "PandaReachSparseCubeVision-v0",
+}
+
+
+def wrap_sim_env(env):
+    if isinstance(env.observation_space, gym.spaces.Dict) and "images" in env.observation_space.spaces:
+        env = SERLObsWrapper(env)
+        env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
+    elif FLAGS.env == "PandaReachSparseCube-v0":
+        env = SERLObsWrapper(env)
+        env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
+    else:
+        env = gym.wrappers.FlattenObservation(env)
+    return env
+
+
+def maybe_wrap_classifier_reward(env):
+    if not FLAGS.use_classifier_reward:
+        return env, None
+    if not FLAGS.reward_classifier_ckpt_path:
+        raise ValueError(
+            "--reward_classifier_ckpt_path is required when --use_classifier_reward=True"
+        )
+    image_keys = FLAGS.classifier_image_keys or infer_image_keys(env.observation_space)
+    validate_image_keys(env.observation_space, image_keys)
+    classifier_fn = load_classifier_func(
+        ckpt_path=FLAGS.reward_classifier_ckpt_path,
+        sample_obs=env.observation_space.sample(),
+        image_keys=image_keys,
+        checkpoint_step=FLAGS.reward_classifier_ckpt_step,
+        threshold=FLAGS.reward_classifier_threshold,
+        use_proprio=FLAGS.classifier_use_proprio,
+    )
+    env = ClassifierRewardWrapper(
+        env,
+        classifier_fn=classifier_fn,
+        threshold=FLAGS.reward_classifier_threshold,
+        terminate_on_success=FLAGS.terminate_on_classifier_success,
+        zero_env_reward=FLAGS.zero_env_reward,
+    )
+    print_green(
+        "classifier reward enabled with "
+        f"image_keys={list(image_keys)}, use_proprio={FLAGS.classifier_use_proprio}"
+    )
+    return env, classifier_fn
+
+
+def actor(agent: Any, data_store, env, sampling_rng):
     """
     This is the actor loop, which runs when "--actor" is set to True.
     """
+    from agentlace.trainer import TrainerClient
+    from serl_launcher.utils.launcher import make_trainer_config
+
     client = TrainerClient(
         "actor_env",
         FLAGS.ip,
@@ -123,10 +193,10 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
 
     client.recv_network_callback(update_params)
 
-    eval_env = gym.make(FLAGS.env)
-    if FLAGS.env == "PandaReachSparseCube-v0":
-        eval_env = SERLObsWrapper(eval_env)
-        eval_env = ChunkingWrapper(eval_env, obs_horizon=1, act_exec_horizon=None)
+    eval_env = gym.make(FLAGS.env, disable_env_checker=True)
+    eval_env = wrap_sim_env(eval_env)
+    if FLAGS.use_classifier_reward:
+        eval_env, _ = maybe_wrap_classifier_reward(eval_env)
     eval_env = RecordEpisodeStatistics(eval_env)
 
     obs, _ = env.reset()
@@ -177,6 +247,8 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
             client.update()
 
         if step % FLAGS.eval_period == 0:
+            from serl_launcher.common.evaluation import evaluate
+
             with timer.context("eval"):
                 evaluate_info = evaluate(
                     policy_fn=partial(agent.sample_actions, argmax=True),
@@ -198,13 +270,15 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
 
 def learner(
     rng,
-    agent: DrQAgent,
+    agent: Any,
     replay_buffer: MemoryEfficientReplayBufferDataStore,
     demo_buffer: Optional[MemoryEfficientReplayBufferDataStore] = None,
 ):
     """
     The learner loop, which runs when "--learner" is set to True.
     """
+    from serl_launcher.utils.launcher import make_trainer_config, make_wandb_logger
+
     # set up wandb and logging
     wandb_logger = make_wandb_logger(
         project=FLAGS.exp_name,
@@ -226,6 +300,8 @@ def learner(
         return {}  # not expecting a response
 
     # Create server
+    from agentlace.trainer import TrainerServer
+
     server = TrainerServer(make_trainer_config(), request_callback=stats_callback)
     server.register_data_store("actor_env", replay_buffer)
     server.start(threaded=True)
@@ -254,6 +330,11 @@ def learner(
         single_buffer_batch_size = FLAGS.batch_size
         demo_iterator = None
     else:
+        if FLAGS.batch_size % 2 != 0:
+            raise ValueError(
+                "--batch_size must be even when demo data is provided so RLPD "
+                "can sample 50/50 online and demonstration batches."
+            )
         single_buffer_batch_size = FLAGS.batch_size // 2
         demo_iterator = demo_buffer.get_iterator(
             sample_args={
@@ -321,8 +402,10 @@ def learner(
 
         if FLAGS.checkpoint_period and update_steps % FLAGS.checkpoint_period == 0:
             assert FLAGS.checkpoint_path is not None
+            checkpoint_path = os.path.abspath(os.path.expanduser(FLAGS.checkpoint_path))
+            os.makedirs(checkpoint_path, exist_ok=True)
             checkpoints.save_checkpoint(
-                FLAGS.checkpoint_path, agent.state, step=update_steps, keep=20
+                checkpoint_path, agent.state, step=update_steps, keep=20
             )
 
         pbar.update(len(replay_buffer) - pbar.n)  # update replay buffer bar
@@ -333,16 +416,14 @@ def learner(
 
 
 def main(_):
-    assert FLAGS.batch_size % num_devices == 0
-
-    # seed
-    rng = jax.random.PRNGKey(FLAGS.seed)
+    global devices, num_devices, sharding
+    configure_jax_cpu_only()
 
     # create env and load dataset
     if FLAGS.render:
-        env = gym.make(FLAGS.env, render_mode="human")
+        env = gym.make(FLAGS.env, render_mode="human", disable_env_checker=True)
     else:
-        env = gym.make(FLAGS.env)
+        env = gym.make(FLAGS.env, disable_env_checker=True)
 
     if FLAGS.env in {"PandaPickCube-v0", "PandaReachCube-v0", "PandaPickSparseCube-v0", "PandaReachSparseCube-v0", "PandaPickCubeVision-v0", "PandaReachCubeVision-v0", "PandaPickSparseCubeVision-v0", "PandaReachSparseCubeVision-v0"}:
         x_obs_idx=np.array([0,4])
@@ -350,16 +431,30 @@ def main(_):
     else:
         raise NotImplementedError(f"Unknown observation layout for {FLAGS.env}")
     
-    if FLAGS.env == "PandaReachSparseCube-v0":
-        env = SERLObsWrapper(env)
-        env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
-    else:
-        env = gym.wrappers.FlattenObservation(env)
+    env = wrap_sim_env(env)
+    env, _ = maybe_wrap_classifier_reward(env)
 
-    image_keys = [key for key in env.observation_space.keys() if key != "state"]
+    image_keys = infer_image_keys(env.observation_space)
 
+    if FLAGS.dry_run:
+        print_green("dry run complete")
+        print(env.observation_space)
+        print(env.action_space)
+        print(f"image_keys={image_keys}")
+        return
+
+    # seed
+    rng = jax.random.PRNGKey(FLAGS.seed)
     rng, sampling_rng = jax.random.split(rng)
-    agent: DrQAgent = make_drq_agent(
+
+    devices = jax.local_devices()
+    num_devices = len(devices)
+    sharding = jax.sharding.PositionalSharding(devices)
+    assert FLAGS.batch_size % num_devices == 0
+
+    from serl_launcher.utils.launcher import make_drq_agent
+
+    agent = make_drq_agent(
         seed=FLAGS.seed,
         sample_obs=env.observation_space.sample(),
         sample_action=env.action_space.sample(),
@@ -369,11 +464,13 @@ def main(_):
 
     # replicate agent across devices
     # need the jnp.array to avoid a bug where device_put doesn't recognize primitives
-    agent: DrQAgent = jax.device_put(
+    agent = jax.device_put(
         jax.tree.map(jnp.array, agent), sharding.replicate()
     )
 
     if FLAGS.learner:
+        from serl_launcher.utils.launcher import make_replay_buffer
+
         sampling_rng = jax.device_put(sampling_rng, device=sharding.replicate())
         replay_buffer = make_replay_buffer(
             env,
@@ -469,6 +566,8 @@ def main(_):
         )
 
     elif FLAGS.actor:
+        from agentlace.data.data_store import QueuedDataStore
+
         sampling_rng = jax.device_put(sampling_rng, sharding.replicate())
         data_store = QueuedDataStore(2000)  # the queue size on the actor
 
