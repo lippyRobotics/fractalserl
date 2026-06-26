@@ -1,6 +1,7 @@
 import copy
 from typing import Iterable, Optional
 
+import cv2
 import gym
 import numpy as np
 from serl_launcher.data.dataset import DatasetDict, _sample
@@ -20,8 +21,10 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         split_method: str,
         img_keys: list,
         kwargs: dict,
+        front_M: Optional[np.ndarray] = None,
+        world_fixed_img_keys: Iterable[str] = (),
     ):
-        
+
         # Initialize values
         self.debug_time = True
         self.current_branch_count = 1
@@ -29,6 +32,16 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         self.workspace_width = workspace_width
         self.img_keys = img_keys
         self._img_insert_index_ = 0
+
+        # Homography config for world-fixed cameras (e.g. the front camera).
+        # front_M is a 3x3 homography mapping the buffer's own state-(x, y)
+        # coordinates -> front-image pixels. world_fixed_img_keys lists the image
+        # keys that are fixed in the world frame and must be warped at sample time
+        # so the image translation matches the per-branch state translation.
+        self.front_M = None if front_M is None else np.asarray(front_M, np.float64)
+        self.world_fixed_img_keys = tuple(world_fixed_img_keys)
+        self.front_map = None
+        self.branch_idx_buffer = None
             
         # Set the idx value (changes depending on environment/wrapper) of the x and y observations and next_observations
         self.x_obs_idx = x_obs_idx
@@ -77,6 +90,24 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         )
 
         self.generate_transform_deltas()
+
+        # Parallel ring recording which branch produced each stored transition, so
+        # sample() knows which homography warp to apply to the world-fixed front
+        # frame. Sized to match the underlying buffer capacity. Only allocated when
+        # both a homography and at least one world-fixed image key are configured.
+        if self.front_M is not None and self.world_fixed_img_keys:
+            # The branch index is only a stable key into front_map while the branch
+            # count (and hence transform_deltas / front_map) is fixed. Variable
+            # branch methods change it mid-run, which would make a stored index point
+            # at the wrong warp. For those, store (dx, dy) per transition instead and
+            # build the warp at sample time (see front_camera_homography_guide.md).
+            assert self.branch_method == "constant", (
+                "\033[31mERROR: \033[0mfront-camera homography warp currently "
+                "supports only branch_method='constant'; got "
+                f"'{self.branch_method}'. See front_camera_homography_guide.md "
+                "(Variable-Branch Methods) to extend it."
+            )
+            self.branch_idx_buffer = np.empty((self._capacity,), dtype=np.int32)
 
     def _handle_method_arg_(self, value, method_type, method, kwargs):
         if hasattr(self, value):
@@ -192,7 +223,62 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         if self._num_stack:
             self.transform_deltas = np.expand_dims(self.transform_deltas, axis=1)
             self.transform_deltas = np.repeat(self.transform_deltas, self._num_stack, axis=1)
-    
+
+        self.generate_front_maps()
+
+    def generate_front_maps(self):
+        '''
+        Precompute, for every branch, a backward remap grid that warps a stored
+        world-fixed (front) frame so its scene translation matches the per-branch
+        state translation applied to state[x_obs_idx]/state[y_obs_idx].
+
+        A world point at state-coord p projects to pixel M @ p. Translating the
+        scene by Delta sends it to pixel M @ T(Delta) @ p, so the old->new pixel map
+        is H = M @ T(Delta) @ inv(M). cv2.remap consumes a backward map (for each
+        destination pixel, where to read in the source), which is inv(H) @ dst.
+
+        Delta for a branch is the net shift insert() applies to the state x/y
+        coords: base_diff + transform_deltas[branch, x/y_idx], with
+        base_diff = -workspace_width / 2 (any constant offset cancels through
+        T(Delta), but it is included here to match insert() exactly).
+
+        Rebuilt whenever transform_deltas changes (e.g. on a branch-count change),
+        so the variable-branch methods stay consistent too.
+        '''
+        if self.front_M is None or not self.world_fixed_img_keys or not self.img_keys:
+            return
+
+        # Per-branch state deltas, recovered regardless of the _num_stack expansion.
+        deltas = self.transform_deltas
+        if self._num_stack:
+            deltas = deltas[:, 0, :]                      # (n, obs_size)
+        n = deltas.shape[0]
+
+        base_diff = -self.workspace_width / 2.0
+        dx = base_diff + deltas[:, self.x_obs_idx[0]]     # (n,)
+        dy = base_diff + deltas[:, self.y_obs_idx[0]]     # (n,)
+
+        # Front frame spatial size, read from the stored ring (H, W).
+        sample_img = next(iter(self.img_buffer.values()))
+        H, W = sample_img.shape[1:3]
+
+        Minv = np.linalg.inv(self.front_M)
+
+        # Homogeneous coords of every destination pixel, (3, H*W).
+        uu, vv = np.meshgrid(np.arange(W), np.arange(H))
+        dst = np.stack([uu.ravel(), vv.ravel(), np.ones(H * W)])
+
+        self.front_map = np.empty((n, H, W, 2), np.float32)
+        for b in range(n):
+            T = np.array([[1.0, 0.0, dx[b]],
+                          [0.0, 1.0, dy[b]],
+                          [0.0, 0.0, 1.0]])
+            Hb = self.front_M @ T @ Minv
+            src = np.linalg.inv(Hb) @ dst                 # (3, H*W)
+            src = src[:2] / src[2]
+            self.front_map[b, ..., 0] = src[0].reshape(H, W)   # map_x
+            self.front_map[b, ..., 1] = src[1].reshape(H, W)   # map_y
+
     def fractal_branch(self):
         '''
         Computes the number of branches for the current depth using an exponential growth rule.
@@ -352,6 +438,20 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         data_dict["masks"] = masks
         data_dict["dones"] = dones
 
+        # Record which branch produced each transition. The tiling above lays the
+        # transitions out in branch order (copy b got transform_deltas[b]), so the
+        # branch index is simply arange(num_transforms). Write it with the same
+        # ring-wraparound super().insert() uses, before _insert_index advances.
+        if self.branch_idx_buffer is not None:
+            bidx = np.arange(num_transforms, dtype=np.int32)
+            s, cap = self._insert_index, self._capacity
+            if s + num_transforms > cap:
+                first = cap - s
+                self.branch_idx_buffer[s:cap] = bidx[:first]
+                self.branch_idx_buffer[0:(s + num_transforms - cap)] = bidx[first:]
+            else:
+                self.branch_idx_buffer[s:s + num_transforms] = bidx
+
         super().insert(data_dict, batch_size=num_transforms)
 
         # Reset current_depth, timestep, and max_traj_length
@@ -420,6 +520,14 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
                 self.dataset_dict["observations"][k], indx
             )
 
+        # Per-sample branch index, used to pick the right homography warp for
+        # world-fixed cameras. None when homography is not configured.
+        branch_idx = (
+            self.branch_idx_buffer[indx]
+            if self.branch_idx_buffer is not None
+            else None
+        )
+
         # Sample images
         for k in self.img_keys:
             obs_imgs = self.img_buffer[k]
@@ -429,6 +537,29 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
             obs_imgs = obs_imgs[self.dataset_dict["observations"][k][indx] - self._num_stack]
             # transpose from (B, H, W, C, T) to (B, T, H, W, C) to follow jaxrl_m convention
             obs_imgs = obs_imgs.transpose((0, 4, 1, 2, 3))
+
+            # Warp world-fixed cameras (e.g. front) so the scene translation in the
+            # image matches the per-branch state translation. EE-mounted cameras
+            # (e.g. wrist_1) are genuinely invariant and skip this block, staying
+            # shared and un-warped. The same warp is applied across the stack so
+            # obs and next_obs frames stay mutually consistent.
+            if (
+                k in self.world_fixed_img_keys
+                and branch_idx is not None
+                and self.front_map is not None
+            ):
+                B, Tp1 = obs_imgs.shape[:2]
+                out = np.empty_like(obs_imgs)
+                for i in range(B):
+                    mx = self.front_map[branch_idx[i], ..., 0]
+                    my = self.front_map[branch_idx[i], ..., 1]
+                    for t in range(Tp1):
+                        out[i, t] = cv2.remap(
+                            obs_imgs[i, t], mx, my,
+                            interpolation=cv2.INTER_LINEAR,
+                            borderMode=cv2.BORDER_REPLICATE,
+                        )
+                obs_imgs = out
 
             if pack_obs_and_next_obs:
                 batch["observations"][k] = obs_imgs

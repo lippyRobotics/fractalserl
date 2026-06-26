@@ -219,6 +219,8 @@ def make_replay_buffer(
     workspace_width_method : str = None, # used only type=="fractal_symmetry_replay_buffer"
     x_obs_idx = None,
     y_obs_idx = None,
+    front_M=None, # used only type=="fractal_symmetry_replay_buffer"
+    world_fixed_img_keys=(), # used only type=="fractal_symmetry_replay_buffer"
     **kwargs: dict # used only type=="fractal_symmetry_replay_buffer"
 ):
     """
@@ -280,6 +282,8 @@ def make_replay_buffer(
             y_obs_idx=y_obs_idx,
             rlds_logger=rlds_logger,
             image_keys=image_keys,
+            front_M=front_M,
+            world_fixed_img_keys=world_fixed_img_keys,
             kwargs=kwargs,
         )
     

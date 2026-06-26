@@ -65,6 +65,22 @@ flags.DEFINE_float("alpha", 0.2, "Rate of change of max_traj_length")
 flags.DEFINE_float("workspace_width", 0.5, "Workspace width in meters")
 flags.DEFINE_integer("starting_branch_count", 27, "Initial number of branches")
 
+# Front-camera homography: warp the world-fixed front frame at sample time so its
+# scene translation matches the per-branch state translation. See
+# front_camera_homography_guide.md.
+flags.DEFINE_string(
+    "front_plane_homography",
+    None,
+    "Path to a .npy holding the 3x3 state-(x,y)->pixel homography M. "
+    "If unset, no front-camera warp is applied.",
+)
+flags.DEFINE_list(
+    "world_fixed_img_keys",
+    ["front"],
+    "Image keys that are fixed in the world frame and must be warped at sample "
+    "time (comma-separated). EE-mounted cameras like wrist_1 must NOT be listed.",
+)
+
 flags.DEFINE_integer("random_steps", 300, "Sample random actions for this many steps.")
 flags.DEFINE_integer("training_starts", 300, "Training starts after this step.")
 flags.DEFINE_integer("steps_per_update", 30, "Number of steps per update the server.")
@@ -529,6 +545,15 @@ def main(_):
     x_obs_idx = np.array([4])
     y_obs_idx = np.array([5])
 
+    # Load the front-plane homography (3x3 state-(x,y)->pixel matrix) if provided.
+    # When None, the front camera is left un-warped.
+    front_M = (
+        np.load(FLAGS.front_plane_homography)
+        if FLAGS.front_plane_homography
+        else None
+    )
+    world_fixed_img_keys = tuple(FLAGS.world_fixed_img_keys) if front_M is not None else ()
+
     if FLAGS.learner:
         sampling_rng = jax.device_put(sampling_rng, device=sharding.replicate())
         replay_buffer = make_replay_buffer(
@@ -546,6 +571,8 @@ def main(_):
             x_obs_idx=x_obs_idx,
             y_obs_idx=y_obs_idx,
             image_keys=image_keys,
+            front_M=front_M,
+            world_fixed_img_keys=world_fixed_img_keys,
         )
         demo_buffer = make_replay_buffer(
             env,
@@ -562,6 +589,8 @@ def main(_):
             x_obs_idx=x_obs_idx,
             y_obs_idx=y_obs_idx,
             image_keys=image_keys,
+            front_M=front_M,
+            world_fixed_img_keys=world_fixed_img_keys,
         )
         import pickle as pkl
 
