@@ -66,8 +66,7 @@ flags.DEFINE_float("workspace_width", 0.5, "Workspace width in meters")
 flags.DEFINE_integer("starting_branch_count", 27, "Initial number of branches")
 
 # Front-camera homography: warp the world-fixed front frame at sample time so its
-# scene translation matches the per-branch state translation. See
-# front_camera_homography_guide.md.
+# scene translation matches the per-branch state translation.
 flags.DEFINE_string(
     "front_plane_homography",
     None,

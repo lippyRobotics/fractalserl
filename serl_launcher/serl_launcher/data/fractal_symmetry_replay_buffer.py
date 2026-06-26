@@ -100,12 +100,11 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
             # count (and hence transform_deltas / front_map) is fixed. Variable
             # branch methods change it mid-run, which would make a stored index point
             # at the wrong warp. For those, store (dx, dy) per transition instead and
-            # build the warp at sample time (see front_camera_homography_guide.md).
+            # build the warp at sample time.
             assert self.branch_method == "constant", (
                 "\033[31mERROR: \033[0mfront-camera homography warp currently "
                 "supports only branch_method='constant'; got "
-                f"'{self.branch_method}'. See front_camera_homography_guide.md "
-                "(Variable-Branch Methods) to extend it."
+                f"'{self.branch_method}'."
             )
             self.branch_idx_buffer = np.empty((self._capacity,), dtype=np.int32)
 

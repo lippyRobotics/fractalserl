@@ -8,9 +8,9 @@ export CHECKPOINT_DIR="$SCRIPT_DIR/checkpoints/fw-$TIMESTAMP" && \
 # image ring never wraps and decorrelates stored states from their frames. With
 # expected_branches = starting_branch_count^2 = 27^2 = 729 and --max_steps 30_000:
 #   capacity >= 30_000 * 729 ~= 21_870_000  ->  22_000_000.
-# --front_plane_homography points to the 3x3 state-(x,y)->pixel matrix calibrated
-# per camera placement (see front_camera_homography_guide.md Step 1). Drop the flag
-# to disable the front-camera warp.
+# --front_plane_homography points to a .npy holding the 3x3 state-(x,y)->pixel
+# matrix calibrated per camera placement. Drop the flag to disable the
+# front-camera warp.
 python async_drq_randomized.py "$@" \
     --seed 1 \
     --replay_buffer_type fractal_symmetry_replay_buffer \
