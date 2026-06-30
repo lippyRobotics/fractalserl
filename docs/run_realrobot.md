@@ -12,6 +12,8 @@ After installation, you should be able to start the robot server and interact wi
 
 > NOTE: The example code below is a template. It assumes you have your own robot setup, camera calibration, data, and checkpoints.
 
+For a more detailed walkthrough, visit our [Notion page](https://app.notion.com/p/Sample-Efficient-Reinforcement-Learning-SERL-1e8cd3402f1a80259660f8c9e6134278).
+
 ## 1. Peg Insertion
 
 
@@ -94,8 +96,6 @@ The classifier is used with `franka_env.envs.wrapper.BinaryRewardClassifier` so 
 **Env and default config:** [serl_robot_infra/franka_env/envs/cable_env/](../serl_robot_infra/franka_env/envs/bin_relocation_env/)
 
 Object relocation uses forward and backward policies so the robot can move an object between bins and reset itself during training. Much like cable routing, it also uses an image-based reward classifier instead of a fixed successful target pose. Train the classifier on successful and failed trajectories, then pass its checkpoint to the actor and two learners.
-
-For a more detailed setup explanation, visit our [Notion page](https://app.notion.com/p/Franka-FR3-Bin-Relocation-Setup-Guide-381cd3402f1a80099ca1d96e5f6de5ec#381cd3402f1a80448a72f607188c1d72).
 
 
 ### Environment Setup
