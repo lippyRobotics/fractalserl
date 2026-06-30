@@ -74,10 +74,10 @@ env = RecordEpisodeStatistics(env)
 
 **Env and default config:** [serl_robot_infra/franka_env/envs/cable_env/](../serl_robot_infra/franka_env/envs/cable_env/) 
 
-Cable routing uses an image-based reward classifier instead of a fixed successful target pose. Train the classifier on successful and failed trajectories, then pass its checkpoint to the actor and learner scripts.
+Cable routing uses an image-based reward classifier instead of a fixed successful target pose. Train the classifier on successful and failed trajectories using classifier/`record_demo.py`. The classifier can be trained with the following command:
 
 ```bash
-python train_reward_classifier.py \
+python classifier/train_reward_classifier.py \
 	 --classifier_ckpt_path CHECKPOINT_OUTPUT_DIR \
 	 --positive_demo_paths PATH_TO_POSITIVE_DEMO1.pkl \
 	 --positive_demo_paths PATH_TO_POSITIVE_DEMO2.pkl \
@@ -85,6 +85,10 @@ python train_reward_classifier.py \
 ```
 
 The classifier is used with `franka_env.envs.wrapper.BinaryRewardClassifier` so the policy can train from an observation-based reward.
+
+Next, successful demos must be recorded. This is done via `record_demo.py` (same file name, but one directory up from the classifier).
+
+Both the trained classifier checkpoint and the newly recorded demos are then passed to the actor and learner scripts.
 
 ## 3. Object Relocation
 
