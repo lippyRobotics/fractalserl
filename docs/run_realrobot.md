@@ -72,7 +72,7 @@ env = RecordEpisodeStatistics(env)
 
 **Env and default config:** [serl_robot_infra/franka_env/envs/cable_env/](../serl_robot_infra/franka_env/envs/cable_env/) 
 
-Cable routing uses an image-based reward classifier instead of a fixed target pose. Train the classifier on successful and failed trajectories, then pass its checkpoint to the actor and learner scripts.
+Cable routing uses an image-based reward classifier instead of a fixed successful target pose. Train the classifier on successful and failed trajectories, then pass its checkpoint to the actor and learner scripts.
 
 ```bash
 python train_reward_classifier.py \
@@ -84,24 +84,48 @@ python train_reward_classifier.py \
 
 The classifier is used with `franka_env.envs.wrapper.BinaryRewardClassifier` so the policy can train from an observation-based reward.
 
-## 3. Object Relocation TODO
+## 3. Object Relocation
 
-<!-- > Example: [examples/async_bin_relocation_fwbw_drq/](../examples/async_bin_relocation_fwbw_drq/)
+![cable-routing](../docs/images/obj_rel_main_image.png)
 
-> Env and default config: `serl_robot_infra/franka_env/envs/bin_env/`
 
-Object relocation uses forward and backward policies so the robot can move an object between bins and reset itself during training.
+**Example:** [examples/async_bin_relocation_fwbw_drq/](../examples/async_bin_relocation_fwbw_routing_drq/)
 
-### Workflow
-1. Record forward and backward trajectories separately.
-2. Train a reward classifier for each direction.
-3. Launch the actor and both learners:
+**Env and default config:** [serl_robot_infra/franka_env/envs/cable_env/](../serl_robot_infra/franka_env/envs/bin_relocation_env/)
+
+Object relocation uses forward and backward policies so the robot can move an object between bins and reset itself during training. Much like cable routing, it also uses an image-based reward classifier instead of a fixed successful target pose. Train the classifier on successful and failed trajectories, then pass its checkpoint to the actor and two learners.
+
+For a more detailed setup explanation, visit our [Notion page](https://app.notion.com/p/Franka-FR3-Bin-Relocation-Setup-Guide-381cd3402f1a80099ca1d96e5f6de5ec#381cd3402f1a80448a72f607188c1d72).
+
+
+### Environment Setup
+1. Two trays are placed side-by-side in front of the robot.
+
+2. Two cameras are used---one (wrist_1) is mounted on the robot wrist, and the other (global) mounted on the table pointed at the trays. Classifier training uses solely the global camera, while policy training utilizes both wrist_1 & global
+
+### Procedure
+1. Record a variety of successful and failed trajectories for both foward/backward policies using `python record_transitions.py` For naming conventions, you might label runs P1, ..., P(n) and N1, ..., N(n) for positive and negative demos respectively. In our experiments, we had ~7 positive and ~14 negative demo files, each with 700 transitions.
+2. Train a reward classifier for each direction. Expand the below command according to your number of demos:
+```bash
+python train_reward_classifier.py \
+	 --classifier_ckpt_path CHECKPOINT_OUTPUT_DIR \
+	 --positive_demo_paths PATH_TO_POSITIVE_DEMO1.pkl \
+	 --positive_demo_paths PATH_TO_POSITIVE_DEMO2.pkl \
+	 --negative_demo_paths PATH_TO_NEGATIVE_DEMO1.pkl \
+	 --negative_demo_paths PATH_TO_NEGATIVE_DEMO2.pkl \
+	 ...
+```
+3. Record demos with `python record_demo.py` to bootstrap the learning. This outputs both fw and bw demo files, which are to be passed into the fw/bw learners respectively via `--demo_path` flag.  
+
+4. Launch the actor and both learners:
 
 	```bash
 	bash run_actor.sh
 	bash run_fw_learner.sh
 	bash run_bw_learner.sh
 	``` -->
+
+
 
 ## Navigation
 
