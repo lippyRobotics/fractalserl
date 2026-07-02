@@ -48,15 +48,19 @@ flags.DEFINE_string("agent", "drq", "Name of agent.")
 flags.DEFINE_string("exp_name", None, "Name of the experiment for wandb logging.")
 flags.DEFINE_integer("max_traj_length", 100, "Maximum length of trajectory.")
 flags.DEFINE_integer("seed", 42, "Random seed.")
-flags.DEFINE_bool("save_model", False, "Whether to save model.")
+flags.DEFINE_bool("save_model", False, "Whether to save model.")    
 flags.DEFINE_integer("batch_size", 256, "Batch size.")
 flags.DEFINE_integer("critic_actor_ratio", 4, "critic to actor update ratio.")
 
 flags.DEFINE_integer("max_steps", 1000000, "Maximum number of training steps.")
-flags.DEFINE_integer("replay_buffer_capacity", 200000, "Replay buffer capacity.")
+flags.DEFINE_integer("replay_buffer_capacity", 200000, "Replay buffer capacity. For replay_buffer_type="
+    "'indexed_symmetry_replay_buffer', capacity counts real (source) transitions, not augmented/tiled rows.")
 
 # replay buffer flags (fractal symmetry support)
-flags.DEFINE_string("replay_buffer_type", "memory_efficient_replay_buffer", "Which replay buffer to use")
+flags.DEFINE_string("replay_buffer_type", "memory_efficient_replay_buffer", "Which replay buffer to use. One of "
+    "'replay_buffer', 'memory_efficient_replay_buffer', 'fractal_symmetry_replay_buffer', or "
+    "'indexed_symmetry_replay_buffer' (applies the fractal-symmetry transform at sample time via "
+    "transformation_index instead of tiling per-branch copies at insert time).")
 flags.DEFINE_integer("branching_factor", None, "Factor by which branch count is changed")
 flags.DEFINE_integer("max_depth", None, "Maximum number of splits that may occur in one episode")
 flags.DEFINE_string("branch_method", "constant", "Method for how many branches to generate")
@@ -543,7 +547,7 @@ def main(_):
     # tcp_pose.z:  6 <-- rel_frame.z points to base.-z
     x_obs_idx = np.array([4])
     y_obs_idx = np.array([5])
-
+    
     # Load the front-plane homography (3x3 state-(x,y)->pixel matrix) if provided.
     # When None, the front camera is left un-warped.
     front_M = (

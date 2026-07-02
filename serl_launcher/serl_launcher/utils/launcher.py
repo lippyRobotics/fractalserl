@@ -19,6 +19,7 @@ from serl_launcher.data.data_store import (
     MemoryEfficientReplayBufferDataStore,
     ReplayBufferDataStore,
     FractalSymmetryReplayBufferDataStore,
+    IndexedSymmetryReplayBufferDataStore,
 )
 
 ##############################################################################
@@ -231,7 +232,9 @@ def make_replay_buffer(
     - env: gym or gymasium environment
     - capacity: capacity of the replay buffer
     - rlds_logger_path: path to save RLDS logs
-    - type: support only for "replay_buffer", "memory_efficient_replay_buffer", and "fractal_symmetry_replay_buffer"
+    - type: support only for "replay_buffer", "memory_efficient_replay_buffer", "fractal_symmetry_replay_buffer",
+      and "indexed_symmetry_replay_buffer" (for this type, capacity counts source transitions, since the class
+      stores one row per real step instead of tiling per-branch copies)
     - image_keys: list of image keys, used only "memory_efficient_replay_buffer"
     - preload_rlds_path: path to preloaded RLDS trajectories
     - preload_data_transform: data transformation function for preloaded RLDS data
@@ -286,7 +289,23 @@ def make_replay_buffer(
             world_fixed_img_keys=world_fixed_img_keys,
             kwargs=kwargs,
         )
-    
+    elif type == "indexed_symmetry_replay_buffer":
+        replay_buffer = IndexedSymmetryReplayBufferDataStore(
+            env.observation_space,
+            env.action_space,
+            capacity=capacity,
+            branch_method=branch_method,
+            split_method=split_method,
+            workspace_width=workspace_width,
+            x_obs_idx=x_obs_idx,
+            y_obs_idx=y_obs_idx,
+            rlds_logger=rlds_logger,
+            image_keys=image_keys,
+            front_M=front_M,
+            world_fixed_img_keys=world_fixed_img_keys,
+            kwargs=kwargs,
+        )
+
     else:
         raise ValueError(f"Unsupported replay_buffer_type: {type}")
 
