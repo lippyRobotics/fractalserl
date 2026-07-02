@@ -5,7 +5,6 @@ from socket import gethostname
 
 import absl.flags as flags
 import ml_collections
-import wandb
 import uuid
 
 
@@ -44,6 +43,9 @@ class WandBLogger(object):
         debug=False,
         offline=False,
     ):
+        import wandb
+
+        self._wandb = wandb
         self.config = wandb_config
         if self.config.unique_identifier == "":
             self.config.unique_identifier = datetime.datetime.now().strftime(
@@ -97,4 +99,4 @@ class WandBLogger(object):
     def log(self, data: dict, step: int = None):
         data_flat = _recursive_flatten_dict(data)
         data = {k: v for k, v in zip(*data_flat)}
-        wandb.log(data, step=step)
+        self._wandb.log(data, step=step)

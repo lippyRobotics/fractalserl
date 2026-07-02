@@ -4,10 +4,7 @@ import jax
 from jax import nn
 
 from typing import Optional
-import tensorflow_datasets as tfds
 
-from agentlace.trainer import TrainerConfig
-from agentlace.data.tfds import populate_datastore
 
 from serl_launcher.common.wandb import WandBLogger
 from serl_launcher.agents.continuous.bc import BCAgent
@@ -170,6 +167,8 @@ def make_vice_agent(
 
 
 def make_trainer_config(port_number: int = 5488, broadcast_port: int = 5489):
+    from agentlace.trainer import TrainerConfig
+
     return TrainerConfig(
         port_number=port_number,
         broadcast_port=broadcast_port,
@@ -294,6 +293,9 @@ def make_replay_buffer(
     # It's also possible to filter specirfic episodes, i.e. by time:
     # ds = ds.filter(lambda ep: tf.strings.regex_full_match(ep['some/session_id'], "20250821_222412"))
     if preload_rlds_path:
+        from agentlace.data.tfds import populate_datastore
+        import tensorflow_datasets as tfds
+
         print(f" - Preloaded {preload_rlds_path} to replay buffer")
         dataset = tfds.builder_from_directory(preload_rlds_path).as_dataset(split="all")
         populate_datastore(
