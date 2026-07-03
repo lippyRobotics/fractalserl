@@ -211,8 +211,21 @@ def scripted_pickcube_action(env, step: int, max_steps: int) -> np.ndarray:
     descend_limit = max(35, int(max_steps * 0.32))
     close_limit = max(28, int(max_steps * 0.15))
 
-    def track(target, max_action):
-        return np.clip((target - tcp) / 0.1, -max_action, max_action)
+    def track(target, max_action, deadband_tolerance=0.002):
+        error = target - tcp
+        dist = np.linalg.norm(error)
+        
+        # Stop jittering if practically at the target
+        if dist < deadband_tolerance:
+            return np.zeros(3, dtype=np.float32)
+            
+        # Lower P-Gain: Increased the denominator from 0.3 to 0.6 for smoother control
+        action = error / 0.6
+        
+        # Smoothly decay the max action as we get close
+        dynamic_max = max_action if dist > 0.05 else max_action * (dist / 0.05)
+        
+        return np.clip(action, -dynamic_max, dynamic_max)
 
     def update_stability(target, tolerance):
         if np.linalg.norm(target - tcp) <= tolerance:
@@ -226,6 +239,7 @@ def scripted_pickcube_action(env, step: int, max_steps: int) -> np.ndarray:
         controller["stable_steps"] = 0
 
     stage = controller["stage"]
+    
     if stage == "approach":
         target = block + np.asarray([0.0, 0.0, 0.14], dtype=np.float32)
         update_stability(target, tolerance=0.025)
@@ -233,6 +247,7 @@ def scripted_pickcube_action(env, step: int, max_steps: int) -> np.ndarray:
         gripper = -0.15
         if controller["stable_steps"] >= 8 or controller["stage_steps"] >= approach_limit:
             advance("descend")
+            
     elif stage == "descend":
         target = block + np.asarray([0.0, 0.0, 0.005], dtype=np.float32)
         update_stability(target, tolerance=0.012)
@@ -240,17 +255,17 @@ def scripted_pickcube_action(env, step: int, max_steps: int) -> np.ndarray:
         gripper = -0.10
         if controller["stable_steps"] >= 10 or controller["stage_steps"] >= descend_limit:
             advance("close")
+            
     elif stage == "close":
         target = block + np.asarray([0.0, 0.0, 0.005], dtype=np.float32)
         delta = track(target, max_action=0.10)
         gripper = 0.06
         if controller["stage_steps"] >= close_limit:
             advance("lift")
+            
     else:
         z_init = float(getattr(base, "_z_init", block[2]))
-        target = np.asarray(
-            [block[0], block[1], z_init + 0.22], dtype=np.float32
-        )
+        target = np.asarray([block[0], block[1], z_init + 0.22], dtype=np.float32)
         delta = track(target, max_action=0.15)
         gripper = 0.05
 
