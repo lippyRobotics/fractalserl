@@ -26,9 +26,7 @@ python "$SCRIPT_DIR/async_drq_sim.py" "$@"\
     --branch_method constant \
     --workspace_width 0.15 \
     --alpha 0.2 \
-    --env PandaPickCubeVision-v0 \
     --demo_path examples/async_drq_sim/demos/pickcube_20_demos_classifier_sparse.pkl \
-    --batch_size 256 \
     --checkpoint_period 1000 \
     --checkpoint_path examples/async_drq_sim/checkpoints/pickcube-rlpd-classifier-sparse-demos \
     --use_classifier_reward=True \
