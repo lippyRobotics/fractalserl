@@ -2,7 +2,7 @@
 
 This example runs asynchronous image-based DrQ/RLPD training in `franka_sim`.
 The default task is `PandaPickCubeVision-v0`, with SERL observations containing
-`state`, `front`, and `wrist`.
+`state` and `wrist`.
 
 Supported workflows:
 
@@ -134,7 +134,6 @@ python examples/async_drq_sim/classifier/train_reward_classifier.py \
     --negative_demo_paths examples/async_drq_sim/classifier/demos/failure_random.pkl \
     --negative_demo_paths examples/async_drq_sim/classifier/demos/failure_scripted.pkl \
     --classifier_ckpt_path examples/async_drq_sim/classifier/checkpoints/pickcube \
-    --image_keys front \
     --image_keys wrist \
     --batch_size 64 \
     --steps_per_epoch 2
@@ -142,25 +141,12 @@ python examples/async_drq_sim/classifier/train_reward_classifier.py \
 python examples/async_drq_sim/classifier/test_classifier.py \
     --env PandaPickCubeVision-v0 \
     --classifier_ckpt_path examples/async_drq_sim/classifier/checkpoints/pickcube \
-    --image_keys front \
     --image_keys wrist \
     --positive_demo_path examples/async_drq_sim/classifier/demos/success.pkl \
     --negative_demo_path examples/async_drq_sim/classifier/demos/failure_scripted.pkl \
     --output_report examples/async_drq_sim/classifier/classifier_report.json
 ```
 
-The camera flags select which image observations the classifier uses.
-`--image_keys front --image_keys wrist` trains a two-camera classifier.
-For a front-only classifier, remove `--image_keys wrist` from both the
-training and testing commands.
-
-The same camera choice must be used downstream wherever the classifier
-checkpoint is loaded. If the checkpoint was trained with both cameras, pass
-`--classifier_image_keys front --classifier_image_keys wrist` when recording
-sparse-reward RL demos and when running both the DRL learner and actor. If the
-checkpoint was trained front-only, pass only `--classifier_image_keys front`.
-The RL policy can still observe both cameras; these flags only control the
-visual reward classifier.
 
 ## Record RL Demonstrations
 
@@ -220,7 +206,6 @@ python examples/async_drq_sim/record_demo.py \
     --demo_reward_mode classifier_sparse \
     --reward_classifier_ckpt_path examples/async_drq_sim/classifier/checkpoints/pickcube \
     --reward_classifier_threshold=0.5 \
-    --classifier_image_keys front \
     --classifier_image_keys wrist \
     --classifier_use_proprio=False \
     --terminate_on_classifier_success=True \
@@ -241,7 +226,6 @@ bash examples/async_drq_sim/run_learner.sh \
     --use_classifier_reward=True \
     --reward_classifier_ckpt_path examples/async_drq_sim/classifier/checkpoints/pickcube \
     --reward_classifier_threshold=0.5 \
-    --classifier_image_keys front \
     --classifier_image_keys wrist \
     --classifier_use_proprio=False \
     --zero_env_reward=True \
@@ -253,7 +237,6 @@ bash examples/async_drq_sim/run_actor.sh \
     --use_classifier_reward=True \
     --reward_classifier_ckpt_path examples/async_drq_sim/classifier/checkpoints/pickcube \
     --reward_classifier_threshold=0.5 \
-    --classifier_image_keys front \
     --classifier_image_keys wrist \
     --classifier_use_proprio=False \
     --zero_env_reward=True \
@@ -265,8 +248,6 @@ available in this simulator, so `manual` falls back to random actions.
 The scripted policy uses measured TCP/cube position feedback with a slow
 approach, alignment hold, controlled descent, gradual grasp, and fixed-height
 lift. Keep `--max_traj_length` at 200 or higher for this conservative sequence.
-For front-only classifier demos, remove both `--classifier_image_keys wrist`
-flags and use a front-only classifier checkpoint.
 
 ## Training in Sim with Vision, No Demos, No Classifier (Dense)
 
@@ -351,7 +332,6 @@ bash examples/async_drq_sim/run_learner.sh \
     --use_classifier_reward=True \
     --reward_classifier_ckpt_path examples/async_drq_sim/classifier/checkpoints/pickcube \
     --reward_classifier_threshold=0.5 \
-    --classifier_image_keys front \
     --classifier_image_keys wrist \
     --classifier_use_proprio=False \
     --zero_env_reward=True \
@@ -367,18 +347,14 @@ bash examples/async_drq_sim/run_actor.sh \
     --use_classifier_reward=True \
     --reward_classifier_ckpt_path examples/async_drq_sim/classifier/checkpoints/pickcube \
     --reward_classifier_threshold=0.5 \
-    --classifier_image_keys front \
     --classifier_image_keys wrist \
     --classifier_use_proprio=False \
     --zero_env_reward=True \
     --terminate_on_classifier_success=True
 ```
 
-Use repeated `--classifier_image_keys` flags to select classifier cameras, for
-example `--classifier_image_keys front --classifier_image_keys wrist`. If not
-provided, all non-state image keys are inferred. Set
-`--classifier_use_proprio=True` only if the checkpoint was trained with
-`--use_proprio=True`.
+Set `--classifier_use_proprio=True` only if the checkpoint was
+trained with `--use_proprio=True`.
 
 ## Deploy Across Two Machines
 
@@ -452,7 +428,7 @@ JAX CUDA initialization fails
 
 No image keys found
 : Use a vision environment such as `PandaPickCubeVision-v0` and confirm the
-  wrapped observation contains `front` and/or `wrist`.
+  wrapped observation contains `wrist`.
 
 Learner remains at `Filling up replay buffer`
 : Start the actor, verify `--ip`, and confirm TCP ports `5488` and `5489` are
