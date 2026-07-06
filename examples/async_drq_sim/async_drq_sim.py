@@ -5,7 +5,6 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 import numpy as np
-from serl_launcher.serl_launcher.wrappers.camera_wrapper import AgentWristCameraWrapper
 import tqdm
 from absl import app, flags
 from flax.training import checkpoints
@@ -18,18 +17,18 @@ import pickle as pkl
 import gym
 from gym.wrappers.record_episode_statistics import RecordEpisodeStatistics
 
-from serl_launcher.serl_launcher.utils.timer_utils import Timer
-from serl_launcher.serl_launcher.wrappers.chunking import ChunkingWrapper
+from serl_launcher.utils.timer_utils import Timer
+from serl_launcher.wrappers.chunking import ChunkingWrapper
 
-from serl_launcher.serl_launcher.data.data_store import MemoryEfficientReplayBufferDataStore
-from serl_launcher.serl_launcher.wrappers.serl_obs_wrappers import SERLObsWrapper
+from serl_launcher.data.data_store import MemoryEfficientReplayBufferDataStore
+from serl_launcher.wrappers.serl_obs_wrappers import SERLObsWrapper
 
 import franka_sim
 
 _CLASSIFIER_DIR = os.path.join(os.path.dirname(__file__), "classifier")
 if _CLASSIFIER_DIR not in sys.path:
     sys.path.append(_CLASSIFIER_DIR)
-from classifier.sim_classifier_utils import (
+from sim_classifier_utils import (
     ClassifierRewardWrapper,
     configure_jax_cpu_only,
     infer_image_keys,
@@ -177,7 +176,7 @@ def actor(agent: Any, data_store, env, sampling_rng):
     This is the actor loop, which runs when "--actor" is set to True.
     """
     from agentlace.trainer import TrainerClient
-    from serl_launcher.serl_launcher.utils.launcher import make_trainer_config
+    from serl_launcher.utils.launcher import make_trainer_config
 
     client = TrainerClient(
         "actor_env",
@@ -248,7 +247,7 @@ def actor(agent: Any, data_store, env, sampling_rng):
             client.update()
 
         if step % FLAGS.eval_period == 0:
-            from serl_launcher.serl_launcher.common.evaluation import evaluate
+            from serl_launcher.common.evaluation import evaluate
 
             with timer.context("eval"):
                 evaluate_info = evaluate(
@@ -278,7 +277,7 @@ def learner(
     """
     The learner loop, which runs when "--learner" is set to True.
     """
-    from serl_launcher.serl_launcher.utils.launcher import make_trainer_config, make_wandb_logger
+    from serl_launcher.utils.launcher import make_trainer_config, make_wandb_logger
 
     # set up wandb and logging
     wandb_logger = make_wandb_logger(
@@ -453,7 +452,7 @@ def main(_):
     sharding = jax.sharding.PositionalSharding(devices)
     assert FLAGS.batch_size % num_devices == 0
 
-    from serl_launcher.serl_launcher.utils.launcher import make_drq_agent
+    from serl_launcher.utils.launcher import make_drq_agent
 
     agent = make_drq_agent(
         seed=FLAGS.seed,
@@ -470,7 +469,7 @@ def main(_):
     )
 
     if FLAGS.learner:
-        from serl_launcher.serl_launcher.utils.launcher import make_replay_buffer
+        from serl_launcher.utils.launcher import make_replay_buffer
 
         sampling_rng = jax.device_put(sampling_rng, device=sharding.replicate())
         replay_buffer = make_replay_buffer(
