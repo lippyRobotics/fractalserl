@@ -58,7 +58,7 @@ class PandaPickCubeGymEnv(MujocoGymEnv):
 
         self.render_mode = render_mode
         self.camera_id = (
-            self._model.camera("front").id,
+            # self._model.camera("front").id,
             self._model.camera("handcam_rgb").id,
         )
         self.image_obs = image_obs
@@ -117,12 +117,12 @@ class PandaPickCubeGymEnv(MujocoGymEnv):
                     ),
                     "images": gym.spaces.Dict(
                         {
-                            "front": gym.spaces.Box(
-                                low=0,
-                                high=255,
-                                shape=(render_spec.height, render_spec.width, 3),
-                                dtype=np.uint8,
-                            ),
+                            # "front": gym.spaces.Box(
+                            #     low=0,
+                            #     high=255,
+                            #     shape=(render_spec.height, render_spec.width, 3),
+                            #     dtype=np.uint8,
+                            # ),
                             "wrist": gym.spaces.Box(
                                 low=0,
                                 high=255,
@@ -273,7 +273,8 @@ class PandaPickCubeGymEnv(MujocoGymEnv):
 
         if self.image_obs:
             obs["images"] = {}
-            obs["images"]["front"], obs["images"]["wrist"] = self.render()
+            # obs["images"]["front"], obs["images"]["wrist"] = self.render()
+            obs["images"]["wrist"] = self.render()[0] # See above line for front+wrist
         else:
             block_pos = self._data.sensor("block_pos").data.astype(np.float32)
             obs["state"]["block_pos"] = block_pos
