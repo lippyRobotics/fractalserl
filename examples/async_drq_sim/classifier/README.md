@@ -79,7 +79,6 @@ python examples/async_drq_sim/classifier/train_reward_classifier.py \
     --negative_demo_paths examples/async_drq_sim/classifier/demos/failure_random.pkl \
     --negative_demo_paths examples/async_drq_sim/classifier/demos/failure_scripted.pkl \
     --classifier_ckpt_path examples/async_drq_sim/classifier/checkpoints/pickcube \
-    --image_keys front \
     --image_keys wrist \
     --batch_size 64 \
     --num_epochs 100 \
@@ -96,11 +95,6 @@ The trainer prints:
 - Held-out positive recall and negative accuracy.
 - Average positive and negative probabilities.
 
-The command above trains a two-camera classifier. To train and test using only
-the forward camera, remove `--image_keys wrist` from both commands and retain
-`--image_keys front`. Use the same image-key selection whenever that checkpoint
-is loaded. A front-only classifier uses less GPU memory; two image streams at
-batch size 256 can require multi-gigabyte temporary allocations.
 
 ## Acceptance Criteria
 
@@ -122,7 +116,6 @@ size or training duration.
 python examples/async_drq_sim/classifier/test_classifier.py \
     --env PandaPickCubeVision-v0 \
     --classifier_ckpt_path examples/async_drq_sim/classifier/checkpoints/pickcube \
-    --image_keys front \
     --image_keys wrist \
     --positive_demo_path examples/async_drq_sim/classifier/demos/success.pkl \
     --negative_demo_path examples/async_drq_sim/classifier/demos/failure_scripted.pkl \
