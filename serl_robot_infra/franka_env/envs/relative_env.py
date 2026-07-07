@@ -10,20 +10,22 @@ from franka_env.utils.transformations import (
 
 class RelativeFrame(gym.Wrapper):
     """
-    This wrapper transforms the observation and action to be expressed in the end-effector frame at reset. 
+    This wrapper transforms the observation and action to be expressed in the end-effector frame at reset.
     All measurements are thus relative to the starting reset frame.
-    
+
     Consider the following frames and nomenclatures:
-    o: base frame
+    o: base robot frame
     r: the frozen tcp frame that happens only at reset time.
-    b: end-effector frame
+    b: the current end-effector frame
 
-    Notation: T_a_b would represent a transformation from b to a.
-    Transformation: reset_tcp_frame -> base_frame:    T_r_o (o to r)
-    Transformation: end_effector_frame -> base_frame: T_b_o (o to b)
-    Transformation: end_effector_frame -> reset_tcp_frame: T_b_r = T_r_o_inv * T_b_o (r to b)
+    Notation: b_T_a would represent a transformation from b to a.
+    T: robot_base_frame -> reset_tcp_frame:         o_T_r
+    T: end_effector_frame -> robot_base_frame:      b_T_o
+    Transformation: reset_tcp_frame -> end_effector_frame:
+        r_T_b = inv(o_T_r) * o_T_b
+        r_T_b = r_T_o * b_T_o
 
-    This wrapper is expected to be used on top of the base Franka environment, which has the following
+    This wrapper is expected to be used on top of the Franka environment, which has the following
     observation space:
     {
         "state": spaces.Dict(
@@ -41,7 +43,7 @@ class RelativeFrame(gym.Wrapper):
     def __init__(self, env: Env, include_relative_pose=True):
         super().__init__(env)
 
-        # Adjoint matrix used to convert tcp_vel or actions from base frame to end-effector frame via Adj(T)^(-1)*tcp_vel
+        # Adjoint matrix used to convert tcp_vel or actions from base frame to end-effector frame via inv(Adj(T))*tcp_vel
         self.adjoint_matrix = np.zeros((6, 6))
 
         self.include_relative_pose = include_relative_pose
@@ -49,13 +51,13 @@ class RelativeFrame(gym.Wrapper):
             # o: base frame
             # r: the frozen tcp frame that happens only at reset time.
             # b: end-effector frame
-            # Transformation from base to tcp: T_r_o 
+            # Transformation from base to tcp: o_T_r (or inv(T_r_o below)
             # Homogeneous transformation matrix from reset pose's relative frame to base frame
             self.T_r_o_inv = np.zeros((4, 4))
 
     def step(self, action: np.ndarray):
         # action is assumed to be (x, y, z, rx, ry, rz, gripper)
-        # Transform action from end-effector frame to base frame
+        # Transform action from base frame to end-effector frame
         transformed_action = self.transform_action(action)
 
         obs, reward, done, truncated, info = self.env.step(transformed_action)
@@ -74,10 +76,41 @@ class RelativeFrame(gym.Wrapper):
         return transformed_obs, reward, done, truncated, info
 
     def reset(self, **kwargs):
+        """
+        Reset the wrapped environment and choose the new relative coordinate frame.
+
+        ``RelativeFrame`` does not directly read ``TARGET_POSE``, ``RESET_POSE``,
+        or the base environment's persistent reset-pose attribute. In this repo
+        that attribute is named ``self.resetpos``; if a future environment uses
+        a name like ``self._reset_pose``, it would play the same indirect role.
+        Instead, ``RelativeFrame`` first calls ``self.env.reset(**kwargs)`` and
+        then uses the returned
+        ``obs["state"]["tcp_pose"]`` as the origin and orientation of the
+        relative frame for this episode.
+
+        In the Franka environments, those config values still affect this
+        wrapper indirectly:
+
+        * ``FrankaEnv`` converts ``config.RESET_POSE`` into ``self.resetpos``.
+        * ``FrankaEnv.reset()`` moves the robot to ``self.resetpos`` when
+          ``RANDOM_RESET`` is disabled.
+        * When ``RANDOM_RESET`` is enabled, ``FrankaEnv.reset()`` starts from
+          ``self.resetpos`` but randomizes xy position and yaw using
+          ``TARGET_POSE`` orientation values.
+        * Some task envs can modify ``self.resetpos`` before the parent reset.
+          For example, bin relocation shifts ``self.resetpos[:2]`` from
+          ``TARGET_POSE`` differently for the forward and backward task ids.
+
+        Therefore, the relative frame is anchored to the actual post-reset TCP
+        pose. For homography code, this distinction matters: calibration points
+        from ``/getpos`` are in the robot base/world frame, while observations
+        after this wrapper are expressed relative to the post-reset TCP frame.
+        """
         obs, info = self.env.reset(**kwargs)
 
-        # Update adjoint matrix
+        # Update adjoint matrix wrt to new reset position
         self.adjoint_matrix = construct_adjoint_matrix(obs["state"]["tcp_pose"])
+
         if self.include_relative_pose:
             # Update transformation matrix from the reset pose's relative frame to base frame
             self.T_r_o_inv = np.linalg.inv(
@@ -91,12 +124,13 @@ class RelativeFrame(gym.Wrapper):
         """
         Convert the environment's observation into the frames expected by the policy.
 
-        * Linear/angular velocities are provided by the wrapped env in the spatial (base)
-          frame; we left-multiply them by ``Adj(T)^{-1}`` so they are expressed in the
-          instantaneous body (end-effector) frame.
-        * When ``include_relative_pose`` is enabled, tcp poses are re-expressed relative
-          to the pose at reset. That is, we compute ``T_r^b = T_r^o @ T_o^b`` and return
-          the position/quaternion extracted from ``T_r^b``.
+        * Linear/angular velocities are provided by the wrapped env in the spatial (base) frame; we left-multiply them by ``inv(Adj(T))`` so they are expressed in the end-effector frame.
+        * When ``include_relative_pose`` is enabled, tcp poses are re-expressed
+          relative to the pose at reset.
+
+          That is, we compute T_r^b = T_r^o @ T_o^b and return
+          the position/quaternion extracted from T_r^b.
+
         * Image observations pass through untouched.
         """
         adjoint_inv = np.linalg.inv(self.adjoint_matrix)
