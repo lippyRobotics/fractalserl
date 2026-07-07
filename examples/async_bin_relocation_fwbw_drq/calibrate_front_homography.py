@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Collect robot-base and raw-image points for front-camera calibration.
+"""Collect robot-base and raw-image points to later create a front-camera  
+calibration matrix for a homography. See more at: https://bit.ly/4p6zIfP
 
 The script reads the RealSense camera directly, so neither the environment's
 128x128 resize nor ``SERLObsWrapper`` changes the image geometry. It saves a
