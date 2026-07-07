@@ -8,6 +8,9 @@ import gym
 
 from franka_env.envs.franka_env import FrankaEnv
 from franka_env.utils.rotations import euler_2_quat
+
+# The following file contains DEFAULT values for camera, target pose, 
+# reward thresholds, penalties, range, limits, compliance & precision params.
 from franka_env.envs.bin_relocation_env.config import BinEnvConfig
 
 
@@ -127,8 +130,8 @@ class FrankaBinRelocation(FrankaEnv):
 
     def reset(self, joint_reset=False, **kwargs):
         '''
-        Set resest position for end-effector based on TARGET_POSE.
-        Select values for forward and backward policy that maximize
+        Set reset position for end-effector based on TARGET_POSE.
+        Select offsets for forward and backward policy that maximize
         your viewing range from global camera.
 
         This is experiment-setup specific and will depend on where 
@@ -140,6 +143,7 @@ class FrankaBinRelocation(FrankaEnv):
             Y_OFFSET_FW = 0.025
             self.resetpos[0] = self._TARGET_POSE[0] + X_OFFSET_FW
             self.resetpos[1] = self._TARGET_POSE[1] + Y_OFFSET_FW
+        
         # Backward policy offset
         elif self.task_id == 1:
             X_OFFSET_BW = 0.2
@@ -157,6 +161,8 @@ class FrankaBinRelocation(FrankaEnv):
         Add a small z offset before going to rest to avoid collision with object.
         """
        # Open gripper
+       # Note: inside _send_gripper_command, there is a 1.5 block by default to avoid fingers reacting too quickly.
+       # This pause hurts in evaluation mode, comment out or fix.
         self._send_gripper_command(1, reset=True)
         
         # Get current position

@@ -10,6 +10,10 @@ class BinEnvConfig(DefaultEnvConfig):
         "wrist_1":  "218622274083",
         "front":    "218622276001",
     }
+
+    # Target pose physically measured at center of bins. 
+    # It is ideal to have a clean \pi roll rotation and 0 pitch 
+    # and yaw as RelativeFrame & homographies will use this.
     TARGET_POSE = np.array(
         [
             0.575,
@@ -30,9 +34,9 @@ class BinEnvConfig(DefaultEnvConfig):
     # All the upper and lower adjustments happen in franka_bin_relocation.py:FrankBinRelocation:30 
     ABS_POSE_LIMIT_LOW = np.array(
         [
-            TARGET_POSE[0] - 0.13,      # -x axis
-            TARGET_POSE[1] - 0.17,       # -y axis
-            TARGET_POSE[2] - (-0.0065),      # -z axis
+            TARGET_POSE[0] - 0.13,          # -x axis
+            TARGET_POSE[1] - 0.17,          # -y axis
+            TARGET_POSE[2] - (-0.0065),     # -z axis
             TARGET_POSE[3] - 0.01,
             TARGET_POSE[4] - 0.01,
             TARGET_POSE[5] - RANDOM_RZ_RANGE,

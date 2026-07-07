@@ -337,17 +337,24 @@ class FrankaEnv(gym.Env):
             time.sleep(0.5)
 
         # Perform Carteasian reset
-        if self.randomreset:  # randomize reset position in xy plane
+        if self.randomreset:  
+            
+            # Randomize reset position in xy plane
             reset_pose = self.resetpos.copy()
             reset_pose[:2] += np.random.uniform(
                 -self.random_xy_range, self.random_xy_range, (2,)
             )
+
+            # Randomize yaw (rotation about z)
             euler_random = self._TARGET_POSE[3:].copy()
             euler_random[-1] += np.random.uniform(
                 -self.random_rz_range, self.random_rz_range
             )
+
+            # Convert to quaternions
             reset_pose[3:] = euler_2_quat(euler_random)
             self.interpolate_move(reset_pose, timeout=1.5)
+            
         else:
             reset_pose = self.resetpos.copy()
             self.interpolate_move(reset_pose, timeout=1.5)
