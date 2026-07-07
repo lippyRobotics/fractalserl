@@ -29,6 +29,11 @@ from serl_launcher.utils.launcher import (
     make_trainer_config,
     make_wandb_logger,
 )
+from serl_launcher.utils.homography import (
+    convert_world_homography_to_relative,
+    load_calibration_artifact,
+    relative_xy_to_world_xy_from_reset_transform,
+)
 from serl_launcher.data.data_store import MemoryEfficientReplayBufferDataStore
 from serl_launcher.wrappers.serl_obs_wrappers import SERLObsWrapper
 from serl_launcher.wrappers.front_camera_wrapper import FrontCameraWrapper
@@ -38,6 +43,7 @@ from franka_env.envs.wrappers import (
     Quat2EulerWrapper,
     FWBWFrontCameraBinaryRewardClassifierWrapper,
 )
+from franka_env.utils.transformations import construct_homogeneous_matrix
 
 import franka_env
 
@@ -64,6 +70,24 @@ flags.DEFINE_string("split_method", "never", "Method for when to change number o
 flags.DEFINE_float("alpha", 0.2, "Rate of change of max_traj_length")
 flags.DEFINE_float("workspace_width", 0.5, "Workspace width in meters")
 flags.DEFINE_integer("starting_branch_count", 27, "Initial number of branches")
+flags.DEFINE_string(
+    "front_homography_path",
+    None,
+    "Optional front-camera calibration JSON. Learner-only; enables homography "
+    "warping for the front image when using fractal_symmetry_replay_buffer.",
+)
+flags.DEFINE_float(
+    "homography_planar_tolerance",
+    1e-6,
+    "Maximum allowed world-z leakage in the RelativeFrame x/y axes when "
+    "converting a world-frame homography into the relative-frame basis.",
+)
+flags.DEFINE_bool(
+    "allow_incompatible_front_homography",
+    False,
+    "Allow camera serial or target image size mismatches when loading "
+    "--front_homography_path. Schema and numerical validation still run.",
+)
 
 flags.DEFINE_integer("random_steps", 300, "Sample random actions for this many steps.")
 flags.DEFINE_integer("training_starts", 300, "Training starts after this step.")
@@ -125,6 +149,117 @@ def print_green(x):
 
 
 ##############################################################################
+
+
+def _front_target_size_hw(env):
+    """Return the wrapped front-camera observation size in ``(height, width)``."""
+
+    observation_spaces = getattr(env.observation_space, "spaces", {})
+    if "front" not in observation_spaces:
+        raise ValueError(
+            "--front_homography_path requires a 'front' image observation key; "
+            f"available keys are {list(observation_spaces)}."
+        )
+    shape = observation_spaces["front"].shape
+    if len(shape) == 3:
+        return int(shape[0]), int(shape[1])
+    if len(shape) == 4:
+        return int(shape[1]), int(shape[2])
+    else:
+        raise ValueError(
+            "Expected front image shape (H, W, C) or (stack, H, W, C), "
+            f"got {shape}."
+        )
+
+
+def _camera_serial_from_env(env, camera_name):
+    """Read a camera serial from the unwrapped env config when available."""
+
+    config = getattr(env.unwrapped, "config", None)
+    cameras = getattr(config, "REALSENSE_CAMERAS", {})
+    if not isinstance(cameras, dict):
+        return None
+    serial = cameras.get(camera_name)
+    if serial is None:
+        return None
+    return str(serial)
+
+
+def _random_reset_enabled(env):
+    """Return whether the unwrapped env may randomize the reset frame."""
+
+    randomreset = getattr(env.unwrapped, "randomreset", False)
+    if isinstance(randomreset, tuple):
+        return any(bool(value) for value in randomreset)
+    return bool(randomreset)
+
+
+def _load_front_homography_for_learner(env):
+    """Load and convert the front-camera calibration for learner replay buffers.
+
+    The calibration artifact stores ``M_target`` in robot base/world xy
+    coordinates because calibration clicks are paired with Franka server
+    ``/getpos`` poses. The learner replay buffer receives state deltas after
+    ``RelativeFrame``, so those deltas are in the post-reset TCP frame. Before
+    passing ``front_M`` to the replay buffer, this helper converts ``M_target``
+    into that relative xy basis.
+
+    The reset xy origin is intentionally not included in the conversion. The
+    replay buffer uses ``front_M`` only inside ``M @ T @ inv(M)`` translation
+    conjugations, where a constant origin translation cancels exactly. Omitting
+    it avoids duplicating task-specific forward/backward reset x/y offsets here
+    while still correcting the important relative-to-world axis basis. For the
+    cleaned bin-relocation reset orientation ``Rx(pi)``, the resulting basis is
+    expected to be approximately ``[[1, 0], [0, -1]]``.
+    """
+
+    if FLAGS.replay_buffer_type != "fractal_symmetry_replay_buffer":
+        raise ValueError(
+            "--front_homography_path requires "
+            "--replay_buffer_type=fractal_symmetry_replay_buffer."
+        )
+    if _random_reset_enabled(env):
+        raise ValueError(
+            "--front_homography_path requires a fixed RelativeFrame basis. "
+            "Disable RANDOM_RESET or extend the data path to store a "
+            "per-episode reset transform."
+        )
+
+    artifact = load_calibration_artifact(
+        FLAGS.front_homography_path,
+        expected_camera_serial=_camera_serial_from_env(env, "front"),
+        expected_target_size_hw=_front_target_size_hw(env),
+        allow_incompatible=FLAGS.allow_incompatible_front_homography,
+    )
+    resetpos_value = getattr(env.unwrapped, "resetpos", None)
+    if resetpos_value is None:
+        raise ValueError("Could not read the unwrapped env resetpos attribute.")
+    resetpos = np.asarray(resetpos_value, dtype=np.float64)
+    if resetpos.shape != (7,):
+        raise ValueError(
+            "Could not read the unwrapped env reset pose as xyz+quat. "
+            f"Expected shape (7,), got {resetpos.shape}."
+        )
+
+    reset_transform = construct_homogeneous_matrix(resetpos)
+    relativeXY_to_worldXY = relative_xy_to_world_xy_from_reset_transform(
+        reset_transform,
+        planar_tolerance=FLAGS.homography_planar_tolerance,
+    )
+    front_M = convert_world_homography_to_relative(
+        artifact["homographies"]["M_target"],
+        relativeXY_to_worldXY,
+    )
+
+    print_green(f"loaded front homography: {FLAGS.front_homography_path}")
+    print("front homography camera serial:", artifact["camera"]["serial"])
+    print(
+        "front homography target size hw:",
+        artifact["image_geometry"]["target_size_hw"],
+    )
+    print("relativeXY_to_worldXY used for front homography:")
+    print(relativeXY_to_worldXY)
+    return front_M, ("front",)
 
 
 def actor(
@@ -431,6 +566,9 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
 
 def main(_):
     assert FLAGS.batch_size % num_devices == 0
+    if FLAGS.front_homography_path and not FLAGS.learner:
+        raise ValueError("--front_homography_path is learner-only.")
+
     # seed
     rng = jax.random.PRNGKey(FLAGS.seed)
     rng, sampling_rng = jax.random.split(rng)
@@ -449,6 +587,10 @@ def main(_):
     env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
     env = FrontCameraWrapper(env)
     image_keys = [key for key in env.observation_space.keys() if key != "state"]
+    front_M = None
+    world_fixed_img_keys = ()
+    if FLAGS.front_homography_path:
+        front_M, world_fixed_img_keys = _load_front_homography_for_learner(env)
 
     if FLAGS.actor:
         front_image_keys = [
@@ -523,9 +665,9 @@ def main(_):
     # tcp_force.x: 1
     # tcp_force.y: 2
     # tcp_force.z: 3
-    # tcp_pose.x:  4 <-- rel_frame.x points to base.+y
-    # tcp_pose.y:  5 <-- rel_frame.y points to base.+x
-    # tcp_pose.z:  6 <-- rel_frame.z points to base.-z
+    # tcp_pose.x:  4 <-- for reset Rx(pi), rel_frame.x points to base/world +x
+    # tcp_pose.y:  5 <-- for reset Rx(pi), rel_frame.y points to base/world -y
+    # tcp_pose.z:  6 <-- for reset Rx(pi), rel_frame.z points to base/world -z
     x_obs_idx = np.array([4])
     y_obs_idx = np.array([5])
 
@@ -546,6 +688,8 @@ def main(_):
             x_obs_idx=x_obs_idx,
             y_obs_idx=y_obs_idx,
             image_keys=image_keys,
+            front_M=front_M,
+            world_fixed_img_keys=world_fixed_img_keys,
         )
         demo_buffer = make_replay_buffer(
             env,
@@ -562,6 +706,8 @@ def main(_):
             x_obs_idx=x_obs_idx,
             y_obs_idx=y_obs_idx,
             image_keys=image_keys,
+            front_M=front_M,
+            world_fixed_img_keys=world_fixed_img_keys,
         )
         import pickle as pkl
 
