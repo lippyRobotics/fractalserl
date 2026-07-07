@@ -15,9 +15,9 @@ class BinEnvConfig(DefaultEnvConfig):
             0.575,
             0.0,
             0.0,
-            3.14,
+            np.pi,
             0.0,
-            0.015
+            0.0,
         ]
     )
     RESET_POSE = TARGET_POSE + np.array([0.0, 0.0, 0.1, 0.0, 0.0, 0.0])
