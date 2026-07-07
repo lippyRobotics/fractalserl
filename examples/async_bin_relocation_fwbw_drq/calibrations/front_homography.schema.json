@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "front_homography.schema.json",
+  "title": "Fractal SERL front-camera planar homography calibration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "created_at",
+    "camera",
+    "coordinate_frame",
+    "pixel_convention",
+    "image_geometry",
+    "plane",
+    "points",
+    "homographies",
+    "fit"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "serial"
+      ],
+      "properties": {
+        "name": {
+          "const": "front"
+        },
+        "serial": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "coordinate_frame": {
+      "const": "robot_base_xy"
+    },
+    "pixel_convention": {
+      "const": "upper_left_pixel_center_uv"
+    },
+    "image_geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_size_hw",
+        "target_size_hw",
+        "resize_method"
+      ],
+      "properties": {
+        "raw_size_hw": {
+          "$ref": "#/$defs/imageSize"
+        },
+        "target_size_hw": {
+          "$ref": "#/$defs/imageSize"
+        },
+        "resize_method": {
+          "const": "opencv_pixel_center"
+        }
+      }
+    },
+    "plane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nominal_z_m",
+        "mean_z_m",
+        "std_z_m",
+        "max_deviation_m",
+        "tolerance_m"
+      ],
+      "properties": {
+        "nominal_z_m": {
+          "type": "number"
+        },
+        "mean_z_m": {
+          "type": "number"
+        },
+        "std_z_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_deviation_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "tolerance_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "points": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "world_xyz_m",
+          "pixel_uv_raw"
+        ],
+        "properties": {
+          "world_xyz_m": {
+            "$ref": "#/$defs/vector3"
+          },
+          "pixel_uv_raw": {
+            "$ref": "#/$defs/vector2"
+          }
+        }
+      }
+    },
+    "homographies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "M_raw",
+        "M_target"
+      ],
+      "properties": {
+        "M_raw": {
+          "$ref": "#/$defs/matrix3x3"
+        },
+        "M_target": {
+          "$ref": "#/$defs/matrix3x3"
+        }
+      }
+    },
+    "fit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "ransac_threshold_px",
+        "inlier_mask",
+        "reprojection_errors_px",
+        "inlier_rmse_px",
+        "inlier_max_error_px",
+        "all_points_rmse_px",
+        "all_points_max_error_px"
+      ],
+      "properties": {
+        "method": {
+          "const": "opencv_find_homography_ransac"
+        },
+        "ransac_threshold_px": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "inlier_mask": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "reprojection_errors_px": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "inlier_rmse_px": {
+          "type": "number",
+          "minimum": 0
+        },
+        "inlier_max_error_px": {
+          "type": "number",
+          "minimum": 0
+        },
+        "all_points_rmse_px": {
+          "type": "number",
+          "minimum": 0
+        },
+        "all_points_max_error_px": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "imageSize": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "integer",
+          "minimum": 1
+        }
+      ],
+      "items": false
+    },
+    "vector2": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "items": false
+    },
+    "vector3": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "items": false
+    },
+    "matrix3x3": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/vector3"
+        },
+        {
+          "$ref": "#/$defs/vector3"
+        },
+        {
+          "$ref": "#/$defs/vector3"
+        }
+      ],
+      "items": false
+    }
+  }
+}

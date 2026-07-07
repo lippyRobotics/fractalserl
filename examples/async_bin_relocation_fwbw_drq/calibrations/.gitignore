@@ -1,0 +1,6 @@
+# Calibration results are hardware- and setup-specific.
+*.json
+*.png
+
+# Keep the versioned contract in this directory.
+!front_homography.schema.json
