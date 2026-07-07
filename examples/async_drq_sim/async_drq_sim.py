@@ -426,8 +426,9 @@ def main(_):
         env = gym.make(FLAGS.env, disable_env_checker=True)
 
     if FLAGS.env in {"PandaPickCube-v0", "PandaReachCube-v0", "PandaPickSparseCube-v0", "PandaReachSparseCube-v0", "PandaPickCubeVision-v0", "PandaReachCubeVision-v0", "PandaPickSparseCubeVision-v0", "PandaReachSparseCubeVision-v0"}:
-        x_obs_idx=np.array([0,4])
-        y_obs_idx=np.array([1,5])
+        import serl_launcher.utils.transform_idx_dict as transform_idx_dict
+        x_obs_idx = transform_idx_dict.observation_idx["sim"]["vision"]["NF"]["x_obs_idx"]
+        y_obs_idx = transform_idx_dict.observation_idx["sim"]["vision"]["NF"]["y_obs_idx"]
     else:
         raise NotImplementedError(f"Unknown observation layout for {FLAGS.env}")
     
