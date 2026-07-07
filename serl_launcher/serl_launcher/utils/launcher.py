@@ -2,8 +2,9 @@
 
 import jax
 from jax import nn
+import numpy as np
 
-from typing import Optional
+from typing import Iterable, Optional
 import tensorflow_datasets as tfds
 
 from agentlace.trainer import TrainerConfig
@@ -210,7 +211,7 @@ def make_replay_buffer(
     capacity: int = 1000000,
     rlds_logger_path: Optional[str] = None,
     type: str = "replay_buffer",
-    image_keys: list = [],  # used only type=="memory_efficient_replay_buffer"
+    image_keys: list = [],  # used by image-aware replay buffers
     preload_rlds_path: Optional[str] = None,
     preload_data_transform: Optional[callable] = None,
     branch_method: str = None, # used only type=="fractal_symmetry_replay_buffer"
@@ -219,21 +220,62 @@ def make_replay_buffer(
     workspace_width_method : str = None, # used only type=="fractal_symmetry_replay_buffer"
     x_obs_idx = None,
     y_obs_idx = None,
+    front_M: Optional[np.ndarray] = None,
+    world_fixed_img_keys: Iterable[str] = (),
     **kwargs: dict # used only type=="fractal_symmetry_replay_buffer"
 ):
-    """
-    This is the high-level helper function to
-    create a replay buffer for the given environment.
+    """Create a replay buffer matching the requested storage implementation.
+
+    Homography augmentation is disabled by default. It is enabled only when a
+    calibration matrix and at least one world-fixed image key are supplied
+    together for a fractal symmetry replay buffer.
 
     Args:
-    - env: gym or gymasium environment
-    - capacity: capacity of the replay buffer
-    - rlds_logger_path: path to save RLDS logs
-    - type: support only for "replay_buffer", "memory_efficient_replay_buffer", and "fractal_symmetry_replay_buffer"
-    - image_keys: list of image keys, used only "memory_efficient_replay_buffer"
-    - preload_rlds_path: path to preloaded RLDS trajectories
-    - preload_data_transform: data transformation function for preloaded RLDS data
+        env: Gym environment defining observation and action spaces.
+        capacity: Maximum number of stored transitions.
+        rlds_logger_path: Optional directory for RLDS logging.
+        type: Replay-buffer implementation name.
+        image_keys: Observation keys containing image arrays.
+        preload_rlds_path: Optional recorded dataset to insert at startup.
+        preload_data_transform: Optional transform applied to preloaded data.
+        branch_method: Fractal rule for selecting branch counts.
+        split_method: Fractal rule for changing depth.
+        workspace_width: Width of the transformed planar workspace.
+        workspace_width_method: Reserved workspace sizing configuration.
+        x_obs_idx: State positions containing planar x coordinates.
+        y_obs_idx: State positions containing planar y coordinates.
+        front_M: Optional 3x3 calibration from augmentation-plane coordinates
+            to pixels in the world-fixed image.
+        world_fixed_img_keys: Image keys that must be warped with transformed
+            state. For bin relocation this will be ``("front",)``.
+        kwargs: Method-specific fractal replay-buffer settings.
+
+    Returns:
+        The configured replay-buffer datastore.
+
+    Raises:
+        ValueError: If homography inputs are incomplete, are requested for a
+            non-fractal buffer, or the replay-buffer type is unsupported.
     """
+
+    if isinstance(world_fixed_img_keys, (str, bytes)):
+        raise ValueError(
+            "world_fixed_img_keys must be an iterable of complete key names, "
+            "not a string."
+        )
+    world_fixed_img_keys = tuple(world_fixed_img_keys)
+    has_front_M = front_M is not None
+    has_world_fixed_img_keys = bool(world_fixed_img_keys)
+    if has_front_M != has_world_fixed_img_keys:
+        raise ValueError(
+            "front_M and world_fixed_img_keys must be configured together."
+        )
+    if has_front_M and type != "fractal_symmetry_replay_buffer":
+        raise ValueError(
+            "Homography augmentation is supported only by "
+            "fractal_symmetry_replay_buffer."
+        )
+
     print("shape of observation space and action space")
     print(env.observation_space)
     print(env.action_space)
@@ -280,6 +322,8 @@ def make_replay_buffer(
             y_obs_idx=y_obs_idx,
             rlds_logger=rlds_logger,
             image_keys=image_keys,
+            front_M=front_M,
+            world_fixed_img_keys=world_fixed_img_keys,
             kwargs=kwargs,
         )
     

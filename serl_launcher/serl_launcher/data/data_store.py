@@ -157,9 +157,33 @@ class FractalSymmetryReplayBufferDataStore(FractalSymmetryReplayBuffer, DataStor
         split_method: str = None,
         rlds_logger: Optional[RLDSLogger] = None,
         image_keys: Iterable[str] = ("image",),
+        front_M = None,
+        world_fixed_img_keys: Iterable[str] = (),
         **kwargs: dict,
     ):
-        FractalSymmetryReplayBuffer.__init__(self, observation_space, action_space, capacity, workspace_width, x_obs_idx, y_obs_idx, branch_method, split_method, img_keys=image_keys, **kwargs)
+        """Initialize a thread-safe fractal datastore.
+
+        ``front_M`` and ``world_fixed_img_keys`` are explicit parameters so
+        homography configuration cannot be hidden inside method-specific
+        ``kwargs``. They remain disabled when the matrix is ``None`` and the
+        key collection is empty.
+        """
+
+        FractalSymmetryReplayBuffer.__init__(
+            self,
+            observation_space,
+            action_space,
+            capacity,
+            workspace_width,
+            x_obs_idx,
+            y_obs_idx,
+            branch_method,
+            split_method,
+            img_keys=image_keys,
+            front_M=front_M,
+            world_fixed_img_keys=world_fixed_img_keys,
+            **kwargs,
+        )
         DataStoreBase.__init__(self, capacity)
         self._lock = Lock()
         self._logger = None
