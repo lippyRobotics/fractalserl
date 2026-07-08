@@ -25,9 +25,13 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     "gripper_type", "Robotiq", "Type of gripper to use: Robotiq, Franka, or None"
 )
+
+# Joint reset
+# L-type start: [0, 0, 0, -1.57, -0, np.pi/2, np.pi/4]
+# Original: # [0, 0, 0, -1.9, -0, 2, 0]
 flags.DEFINE_list(
     "reset_joint_target",
-    [0, 0, 0, -1.9, -0, 2, 0],
+    [0, 0, 0, -np.pi/2, -0, np.pi/2, np.pi/4], 
     "Target joint angles for the robot to reset to",
 )
 
