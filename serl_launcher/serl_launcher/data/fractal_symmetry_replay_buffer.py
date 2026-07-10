@@ -139,6 +139,7 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         self.workspace_width = workspace_width
         self.img_keys = img_keys
         self._img_insert_index_ = 0
+        self._num_original_transitions_inserted = 0
 
         # Homography configuration for world-fixed cameras. front_M is the
         # calibrated 3x3 mapping from workspace-plane coordinates to image
@@ -245,6 +246,19 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         if self._homography_enabled:
             self.generate_front_inverse_homographies()
             self.generate_front_maps()
+
+    @property
+    def num_original_transitions_inserted(self) -> int:
+        """Count real environment transitions inserted before augmentation.
+
+        ``len(self)`` reports stored replay entries. In this fractal replay
+        buffer, one real transition may be expanded into many translated replay
+        entries. This property keeps the unaugmented transition count available
+        to learner startup logic so ``training_starts`` can mean physical actor
+        experience rather than augmented copies.
+        """
+
+        return self._num_original_transitions_inserted
 
     def _homography_checks(
         self,
@@ -839,6 +853,7 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         # batch; the parent handles circular wraparound and advances its index
         # by num_transforms while preserving alignment between all fields.
         super().insert(data_dict, batch_size=num_transforms)
+        self._num_original_transitions_inserted += 1
 
         # Reset current_depth, timestep, and max_traj_length
         self.timestep += 1
