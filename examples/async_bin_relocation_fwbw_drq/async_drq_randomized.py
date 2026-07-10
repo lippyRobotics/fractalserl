@@ -276,6 +276,28 @@ def _load_front_homography_for_learner(env):
     return front_M, ("front",)
 
 
+def _num_real_replay_transitions(replay_buffer) -> int:
+    """Return the number of real actor transitions available for startup.
+
+    Standard replay buffers store one replay entry per real transition, so
+    ``len(replay_buffer)`` is already the physical transition count. The
+    fractal symmetry replay buffer stores many augmented replay entries for one
+    real transition, so it exposes ``num_original_transitions_inserted`` for
+    learner startup checks.
+    """
+
+    real_count = getattr(replay_buffer, "num_original_transitions_inserted", None)
+    if real_count is None:
+        return len(replay_buffer)
+    return int(real_count)
+
+
+def _capped_replay_fill_progress(replay_buffer) -> int:
+    """Return progress-bar fill count capped at ``training_starts``."""
+
+    return min(_num_real_replay_transitions(replay_buffer), FLAGS.training_starts)
+
+
 def _front_images_from_batch(batch):
     """Return sampled front images as a flat ``(N, H, W, C)`` NumPy array.
 
@@ -669,18 +691,20 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
     server.register_data_store("actor_env", replay_buffer)
     server.start(threaded=True)
 
-    # Loop to wait until replay_buffer is filled
+    # Loop until enough real actor transitions are available. For fractal
+    # replay buffers, len(replay_buffer) counts augmented entries, so use the
+    # original-transition counter when the buffer exposes one.
     pbar = tqdm.tqdm(
         total=FLAGS.training_starts,
-        initial=len(replay_buffer),
-        desc=f"Filling up {FLAGS.fwbw} replay buffer",
+        initial=_capped_replay_fill_progress(replay_buffer),
+        desc=f"Filling up {FLAGS.fwbw} replay buffer with real transitions",
         position=0,
         leave=True,
     )
-    while len(replay_buffer) < FLAGS.training_starts:
-        pbar.update(len(replay_buffer) - pbar.n)  # Update progress bar
+    while _num_real_replay_transitions(replay_buffer) < FLAGS.training_starts:
+        pbar.update(_capped_replay_fill_progress(replay_buffer) - pbar.n)
         time.sleep(1)
-    pbar.update(len(replay_buffer) - pbar.n)  # Update progress bar
+    pbar.update(_capped_replay_fill_progress(replay_buffer) - pbar.n)
     pbar.close()
 
     # send the initial network to the actor
@@ -802,7 +826,10 @@ def main(_):
     env = SERLObsWrapper(env)
     env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
     env = FrontCameraWrapper(env)
+
     image_keys = [key for key in env.observation_space.keys() if key != "state"]
+
+    # Homography calls
     front_M = None
     world_fixed_img_keys = ()
     if FLAGS.front_homography_path:
