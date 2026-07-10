@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 import time
+from pathlib import Path
 from functools import partial
 import jax
 import jax.numpy as jnp
 import numpy as np
 import tqdm
+import cv2
 from absl import app, flags
 from flax.training import checkpoints
 from copy import deepcopy
@@ -87,6 +89,18 @@ flags.DEFINE_bool(
     False,
     "Allow camera serial or target image size mismatches when loading "
     "--front_homography_path. Schema and numerical validation still run.",
+)
+flags.DEFINE_string(
+    "homography_debug_dump_dir",
+    None,
+    "Optional learner-only directory for saving one image grid of sampled "
+    "front-camera replay images after homography remapping. Disabled when unset.",
+)
+flags.DEFINE_integer(
+    "homography_debug_max_images",
+    32,
+    "Maximum number of sampled front-camera images to include in each "
+    "homography debug image grid.",
 )
 
 flags.DEFINE_integer("random_steps", 300, "Sample random actions for this many steps.")
@@ -260,6 +274,188 @@ def _load_front_homography_for_learner(env):
     print("relativeXY_to_worldXY used for front homography:")
     print(relativeXY_to_worldXY)
     return front_M, ("front",)
+
+
+def _front_images_from_batch(batch):
+    """Return sampled front images as a flat ``(N, H, W, C)`` NumPy array.
+
+    The replay iterator may return ordinary NumPy arrays, JAX arrays, or sharded
+    arrays depending on the device placement path. It may also include extra
+    leading dimensions such as batch, stack/time, or device. This helper keeps
+    the final image dimensions and flattens every leading dimension into one
+    image index for visualization.
+    """
+
+    observations = batch.get("observations", {})
+    if "front" not in observations:
+        return None
+
+    images = np.asarray(jax.device_get(observations["front"]))
+    if images.ndim < 3:
+        raise ValueError(
+            f"Expected front images with at least 3 dimensions, got {images.shape}."
+        )
+    if images.ndim == 3:
+        images = images[None, ...]
+    if images.shape[-1] not in (1, 3, 4):
+        raise ValueError(
+            "Expected front images with channel-last shape (..., H, W, C), "
+            f"got {images.shape}."
+        )
+
+    return images.reshape((-1, *images.shape[-3:]))
+
+
+def _as_uint8_images(images):
+    """Convert image arrays to uint8 RGB-like arrays for diagnostic PNG files."""
+
+    images = np.asarray(images)
+    if images.dtype == np.uint8:
+        output = images.copy()
+    else:
+        output = images.astype(np.float32)
+        if output.size and np.nanmax(output) <= 1.0:
+            output = output * 255.0
+        output = np.clip(output, 0.0, 255.0).astype(np.uint8)
+
+    if output.shape[-1] == 1:
+        output = np.repeat(output, 3, axis=-1)
+    elif output.shape[-1] == 4:
+        output = output[..., :3]
+    return output
+
+
+def _make_image_grid(images, *, max_images: int, columns: int = 8):
+    """Arrange sampled images into one human-viewable image grid.
+
+    This helper is used only by the optional homography debug dump. It takes a
+    flat collection of sampled front-camera images and lays them out left to
+    right, then top to bottom, with a small white gutter between images. The
+    ``columns`` argument controls how many images appear in each row. For
+    example, ``max_images=32`` and ``columns=8`` produces at most a ``4 x 8``
+    grid. If the number of images is not divisible by ``columns``, the unused
+    cells in the final row remain white.
+
+    Args:
+        images: Image array with shape ``(N, H, W, C)``. Values may be
+            ``uint8`` in ``[0, 255]`` or floating point in either ``[0, 1]`` or
+            ``[0, 255]``. Single-channel images are repeated into RGB-like
+            grayscale, and four-channel images drop the alpha channel before
+            writing the grid.
+        max_images: Maximum number of images to include from the front of the
+            array. This prevents one debug dump from creating an excessively
+            large PNG.
+        columns: Number of images per row. The value is clamped to the range
+            ``[1, number_of_images]`` so the grid is always valid.
+
+    Returns:
+        A ``uint8`` image grid with shape
+        ``(rows * H + gutters, columns * W + gutters, C)``. Returns ``None``
+        when no images are provided.
+
+    Raises:
+        ValueError: If ``max_images`` is not positive.
+    """
+
+    if max_images <= 0:
+        raise ValueError("homography_debug_max_images must be positive.")
+    images = _as_uint8_images(images[:max_images])
+    if images.size == 0:
+        return None
+
+    # Extract dimensions
+    count, height, width, channels = images.shape
+    columns = max(1, min(columns, count))
+    rows = int(np.ceil(count / columns))
+    gutter = 2
+
+    # Create image grid of images full of white images (values 255)
+    image_grid = np.full(
+        (
+            rows * height + (rows - 1) * gutter,
+            columns * width + (columns - 1) * gutter,
+            channels,
+        ),
+        255,
+        dtype=np.uint8,
+    )
+
+    for index, image in enumerate(images):
+        row, column = divmod(index, columns)
+        y0 = row * (height + gutter)
+        x0 = column * (width + gutter)
+        image_grid[y0 : y0 + height, x0 : x0 + width] = image
+
+    return image_grid
+
+
+def _write_front_image_debug_dump(batch, *, name: str, update_step: int):
+    """Save one front-camera image grid and simple image statistics."""
+
+    images = _front_images_from_batch(batch)
+    if images is None:
+        print(f"homography debug: batch {name!r} has no front image key.")
+        return
+
+    output_dir = Path(FLAGS.homography_debug_dump_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    prefix = f"{FLAGS.fwbw}_{name}_front_update{update_step:06d}"
+    image_grid = _make_image_grid(
+        images,
+        max_images=FLAGS.homography_debug_max_images,
+    )
+    if image_grid is None:
+        print(f"homography debug: batch {name!r} has no front images.")
+        return
+
+    # Images are treated as RGB-like arrays for humans; cv2.imwrite expects BGR.
+    png_path = output_dir / f"{prefix}.png"
+    cv2.imwrite(str(png_path), image_grid[..., ::-1])
+
+    images_uint8 = _as_uint8_images(images)
+    stats_path = output_dir / f"{prefix}_stats.txt"
+    stats_path.write_text(
+        "\n".join(
+            [
+                f"name: {name}",
+                f"update_step: {update_step}",
+                f"shape: {tuple(images.shape)}",
+                f"dtype: {images.dtype}",
+                f"min: {float(images_uint8.min())}",
+                f"max: {float(images_uint8.max())}",
+                f"mean: {float(images_uint8.mean())}",
+                f"std: {float(images_uint8.std())}",
+                f"fraction_pixels_near_black: {float((images_uint8 <= 5).mean())}",
+                f"fraction_pixels_near_white: {float((images_uint8 >= 250).mean())}",
+                f"image_grid: {png_path}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    print(f"homography debug: wrote {png_path} and {stats_path}")
+
+
+def _maybe_dump_homography_debug_batches(
+    *,
+    replay_batch,
+    demo_batch,
+    update_step: int,
+):
+    """Write sampled online/demo front images once when debug dumping is enabled."""
+
+    if not FLAGS.homography_debug_dump_dir:
+        return
+    _write_front_image_debug_dump(
+        replay_batch,
+        name="online_replay",
+        update_step=update_step,
+    )
+    _write_front_image_debug_dump(
+        demo_batch,
+        name="demo_replay",
+        update_step=update_step,
+    )
 
 
 def actor(
@@ -497,6 +693,9 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
             "batch_size": FLAGS.batch_size // 2,
             "pack_obs_and_next_obs": True,
         },
+        # Replicated sharding tells the iterator to place sampled batches on
+        # the JAX device path (GPU/TPU/CPU backend) instead of leaving them only
+        # as host NumPy arrays.
         device=sharding.replicate(),
     )
     demo_iterator = demo_buffer.get_iterator(
@@ -504,11 +703,14 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
             "batch_size": FLAGS.batch_size // 2,
             "pack_obs_and_next_obs": True,
         },
+        # Same device placement for demo batches so online and demo samples
+        # have matching JAX layouts before concatenation.
         device=sharding.replicate(),
     )
 
     # wait till the replay buffer is filled with enough data
     timer = Timer()
+    homography_debug_dumped = False
     pbar = tqdm.tqdm(
         total=FLAGS.max_steps,
         initial=0,
@@ -525,6 +727,13 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
             with timer.context("sample_replay_buffer"):
                 batch = next(replay_iterator)
                 demo_batch = next(demo_iterator)
+                if not homography_debug_dumped:
+                    _maybe_dump_homography_debug_batches(
+                        replay_batch=batch,
+                        demo_batch=demo_batch,
+                        update_step=update_steps,
+                    )
+                    homography_debug_dumped = True
                 batch = concat_batches(batch, demo_batch, axis=0)
 
             with timer.context("train_critics"):
@@ -535,6 +744,13 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
         with timer.context("train"):
             batch = next(replay_iterator)
             demo_batch = next(demo_iterator)
+            if not homography_debug_dumped:
+                _maybe_dump_homography_debug_batches(
+                    replay_batch=batch,
+                    demo_batch=demo_batch,
+                    update_step=update_steps,
+                )
+                homography_debug_dumped = True
             batch = concat_batches(batch, demo_batch, axis=0)
             agent, update_info = agent.update_high_utd(batch, utd_ratio=1)
 
