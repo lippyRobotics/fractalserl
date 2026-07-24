@@ -83,6 +83,9 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
             capacity=capacity,
         )
 
+        # Tracks whether each replay slot corresponds to a reflected symmetry branch.
+        self._is_reflected_sample = np.zeros(capacity, dtype=bool)
+
         self.generate_transform_deltas()
 
     def _handle_method_arg_(self, value, method_type, method, kwargs):
@@ -329,6 +332,14 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         num_transforms = self.transform_deltas.shape[0]
         reflected_transform_start = num_transforms // 2
 
+        # Mark reflected transforms so image samples can be mirrored on retrieval.
+        reflected_flags = np.zeros(num_transforms, dtype=bool)
+        reflected_flags[reflected_transform_start:] = True
+        insert_slots = (
+            np.arange(num_transforms, dtype=np.int64) + self._insert_index
+        ) % self._capacity
+        self._is_reflected_sample[insert_slots] = reflected_flags
+
         obs_shape = np.ones(len(obs.shape) + 1, dtype=int)
         obs_shape[0] = num_transforms
         obs = np.tile(obs, obs_shape)
@@ -450,6 +461,11 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
             obs_imgs = obs_imgs[self.dataset_dict["observations"][k][indx] - self._num_stack]
             # transpose from (B, H, W, C, T) to (B, T, H, W, C) to follow jaxrl_m convention
             obs_imgs = obs_imgs.transpose((0, 4, 1, 2, 3))
+
+            reflected_mask = self._is_reflected_sample[indx]
+            if np.any(reflected_mask):
+                obs_imgs = obs_imgs.copy()
+                obs_imgs[reflected_mask] = np.flip(obs_imgs[reflected_mask], axis=3)
 
             if pack_obs_and_next_obs:
                 batch["observations"][k] = obs_imgs
