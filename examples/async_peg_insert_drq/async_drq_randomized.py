@@ -373,8 +373,10 @@ def main(_):
     # tcp_pose.x:  4 <-- rel_frame.x points to base.+y
     # tcp_pose.y:  5 <-- rel_frame.y points to base.+x
     # tcp_pose.z:  6 <-- rel_frame.z points to base.-z
-    x_obs_idx = np.array([4])
-    y_obs_idx = np.array([5])
+    x_obs_idx = np.array([4], dtype=np.int32)
+    y_obs_idx = np.array([5], dtype=np.int32)
+    y_state_reflect_idx = np.array([2, 5, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
+    y_action_reflect_idx = np.array([1], dtype=np.int32)
     
     if FLAGS.learner:
         sampling_rng = jax.device_put(sampling_rng, device=sharding.replicate())
@@ -393,6 +395,8 @@ def main(_):
             workspace_width=FLAGS.workspace_width,
             x_obs_idx=x_obs_idx,
             y_obs_idx=y_obs_idx,
+            y_state_reflect_idx=y_state_reflect_idx,
+            y_action_reflect_idx=y_action_reflect_idx,
             # preload_rlds_path=FLAGS.preload_rlds_path,
             image_keys=image_keys,
         )
@@ -411,6 +415,8 @@ def main(_):
             workspace_width=FLAGS.workspace_width,
             x_obs_idx=x_obs_idx,
             y_obs_idx=y_obs_idx,
+            y_state_reflect_idx=y_state_reflect_idx,
+            y_action_reflect_idx=y_action_reflect_idx,
             # preload_rlds_path=FLAGS.preload_rlds_path,
             image_keys=image_keys,
         )
