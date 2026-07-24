@@ -462,10 +462,11 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
             # transpose from (B, H, W, C, T) to (B, T, H, W, C) to follow jaxrl_m convention
             obs_imgs = obs_imgs.transpose((0, 4, 1, 2, 3))
 
-            reflected_mask = self._is_reflected_sample[indx]
-            if np.any(reflected_mask):
-                obs_imgs = obs_imgs.copy()
-                obs_imgs[reflected_mask] = np.flip(obs_imgs[reflected_mask], axis=3)
+            reflected_idx = np.flatnonzero(self._is_reflected_sample[indx])
+            if reflected_idx.size:
+                if not obs_imgs.flags.writeable:
+                    obs_imgs = obs_imgs.copy()
+                obs_imgs[reflected_idx] = np.flip(obs_imgs[reflected_idx], axis=3)
 
             if pack_obs_and_next_obs:
                 batch["observations"][k] = obs_imgs
