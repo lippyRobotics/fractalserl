@@ -350,7 +350,7 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
             obs[reflected_transform_start:, ..., self.y_state_reflect_idx] *= -1
             n_obs[reflected_transform_start:, ..., self.y_state_reflect_idx] *= -1
         if self.y_action_reflect_idx.size:
-            obs[reflected_transform_start:, ..., self.y_action_reflect_idx] *= -1
+            actions[reflected_transform_start:, ..., self.y_action_reflect_idx] *= -1
 
         rewards = np.tile(rewards, num_transforms)
         masks = np.tile(masks, num_transforms)
