@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Peg Insert: run_learner.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/async_peg_insert_drq/run_learner.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Peg Insert: run_actor.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/async_peg_insert_drq/run_actor.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Peg Insert: Learner + Actor",
+            "configurations": [
+                "Peg Insert: run_learner.py",
+                "Peg Insert: run_actor.py"
+            ]
+        }
+    ]
+}
