@@ -4,6 +4,7 @@ export XLA_PYTHON_CLIENT_PREALLOCATE=false && \
 export XLA_PYTHON_CLIENT_MEM_FRACTION=.3 && \
 # Use malloc_async to reduce fragmentation, overlap memory allocation with compute, lower stalls and improve worklads. Requires cuda11.2+
 export TF_GPU_ALLOCATOR=cuda_malloc_async && \
+export SCRIPT_DIR=$(dirname "$(realpath "$0")") && \
 export TIMESTAMP=$(date +"%m-%d-%Y-%H-%M-%S") && \
 export CHECKPOINT_DIR="$SCRIPT_DIR/checkpoints/checkpoints-$TIMESTAMP" && \
 export CHECKPOINT_EVAL="/home/student/code/serl/examples/async_peg_insert_drq/checkpoints/checkpoints-07-14-2025-23-15-59" && \
@@ -18,7 +19,19 @@ export CHECKPOINT_EVAL="/home/student/code/serl/examples/async_peg_insert_drq/ch
 #     }
 # fi
 
-python async_drq_randomized.py "$@" \
+cd "$SCRIPT_DIR" || exit 1
+
+if command -v conda >/dev/null 2>&1; then
+    PYTHON_CMD=(conda run -n serl python)
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_CMD=(python)
+else
+    echo "Neither 'python' nor 'conda' was found in PATH." >&2
+    echo "Install Python or make conda available in PATH for env 'serl'." >&2
+    exit 1
+fi
+
+"${PYTHON_CMD[@]}" async_drq_randomized.py "$@" \
     --actor \
     --render \
     --env "FrankaPegInsert-Vision-v0" \

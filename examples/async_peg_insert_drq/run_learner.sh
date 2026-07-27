@@ -18,7 +18,19 @@ if [ ! -d "$CHECKPOINT_DIR" ]; then
     }
 fi
 
-python async_drq_randomized.py "$@" \
+cd "$SCRIPT_DIR" || exit 1
+
+if command -v conda >/dev/null 2>&1; then
+    PYTHON_CMD=(conda run -n serl python)
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_CMD=(python)
+else
+    echo "Neither 'python' nor 'conda' was found in PATH." >&2
+    echo "Install Python or make conda available in PATH for env 'serl'." >&2
+    exit 1
+fi
+
+"${PYTHON_CMD[@]}" async_drq_randomized.py "$@" \
     --learner \
     --env $ENV_NAME \
     --exp_name="PegInsert-march_2026" \
