@@ -57,7 +57,13 @@ flags.DEFINE_integer("steps_per_update", 30, "Number of steps per update the ser
 
 flags.DEFINE_integer("log_period", 10, "Logging period.")
 flags.DEFINE_integer("eval_period", 2000, "Evaluation period.")
+flags.DEFINE_integer(
+    "actor_joint_reset_every",
+    40,
+    "Force a joint reset every N completed actor episodes to prevent posture drift.",
 
+
+)
 # flag to indicate if this is a leaner or a actor
 flags.DEFINE_boolean("learner", False, "Is this a learner or a trainer.")
 flags.DEFINE_boolean("actor", False, "Is this a learner or a trainer.")
@@ -166,6 +172,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
     # training loop
     timer = Timer()
     running_return = 0.0
+    episodes = 0
 
     for step in tqdm.tqdm(range(FLAGS.max_steps), dynamic_ncols=True):
         timer.tick("total")
@@ -205,10 +212,17 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
 
             obs = next_obs
             if done or truncated:
+                episodes += 1
                 stats = {"train": info}  # send stats to the learner to log
                 client.request("send-stats", stats)
                 running_return = 0.0
-                obs, _ = env.reset()
+                # Peg insertion can accumulate controller/frame bias over repeated
+                # contact-rich episodes. Periodic joint resets keep the arm upright.
+                do_joint_reset = (
+                    FLAGS.actor_joint_reset_every > 0
+                    and episodes % FLAGS.actor_joint_reset_every == 0
+                )
+                obs, _ = env.reset(joint_reset=do_joint_reset)
 
         if step % FLAGS.steps_per_update == 0:
             client.update()
