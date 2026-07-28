@@ -127,9 +127,9 @@ def flip_transition_horizontally(transition, image_keys, y_obs_idx):
                 flipped_transition["next_observations"][key], axis=-2
             )
     
-    # Flip x-position in state (negate x coordinates)
-    flipped_transition["observations"][y_obs_idx] = -flipped_transition["observations"][y_obs_idx]
-    flipped_transition["next_observations"][y_obs_idx] = -flipped_transition["next_observations"][y_obs_idx]
+    # Flip y-position in state (negate y coordinates)
+    flipped_transition["observations"]["state"][y_obs_idx] = -flipped_transition["observations"]["state"][y_obs_idx]
+    flipped_transition["next_observations"]["state"][y_obs_idx] = -flipped_transition["next_observations"]["state"][y_obs_idx]
     
     return flipped_transition
 
