@@ -107,7 +107,7 @@ def print_green(x):
 ##############################################################################
 
 
-def flip_transition_horizontally(transition, image_keys, y_obs_idx):
+def flip_transition_horizontally(transition, image_keys, y_obs_idx, invert_state_indices=None):
     """
     Create a horizontally flipped version of a transition.
     
@@ -115,9 +115,10 @@ def flip_transition_horizontally(transition, image_keys, y_obs_idx):
         transition: Dictionary with keys 'observations', 'next_observations', etc.
         image_keys: List of keys that contain images (e.g., ['image', 'depth'])
         y_obs_idx: Array indices of y-position in the state vector
+        invert_state_indices: Array indices of state values to negate (e.g., [0, 1, 2])
     
     Returns:
-        flipped_transition: A new transition dict with horizontally flipped images and adjusted x-positions
+        flipped_transition: A new transition dict with horizontally flipped images and adjusted state values
     """
     flipped_transition = copy.deepcopy(transition)
     
@@ -132,8 +133,14 @@ def flip_transition_horizontally(transition, image_keys, y_obs_idx):
                 flipped_transition["next_observations"][key], axis=-2
             )
     
-    # Flip y-position in state (negate y coordinates)
+    # Invert specified state indices (negate values)
     # Use ellipsis to handle any leading dimensions (batch, time, etc.)
+    if invert_state_indices is not None:
+        for idx in invert_state_indices:
+            flipped_transition["observations"]["state"][..., idx] = -flipped_transition["observations"]["state"][..., idx]
+            flipped_transition["next_observations"]["state"][..., idx] = -flipped_transition["next_observations"]["state"][..., idx]
+    
+    # Also invert y-position (backward compatibility)
     flipped_transition["observations"]["state"][..., y_obs_idx] = -flipped_transition["observations"]["state"][..., y_obs_idx]
     flipped_transition["next_observations"]["state"][..., y_obs_idx] = -flipped_transition["next_observations"]["state"][..., y_obs_idx]
     
@@ -247,7 +254,9 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
             data_store.insert(transition)
             
             # Insert horizontally flipped transition for augmentation
-            flipped_transition = flip_transition_horizontally(transition, image_keys, y_obs_idx)
+            # Invert indices 0, 1, 2 of state along with y_obs_idx
+            invert_indices = np.array([2, 5, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
+            flipped_transition = flip_transition_horizontally(transition, image_keys, y_obs_idx, invert_state_indices=invert_indices)
             data_store.insert(flipped_transition)
 
             obs = next_obs
