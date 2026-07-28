@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import copy
 import time
 from functools import partial
 import jax
@@ -40,7 +41,7 @@ import franka_env
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("env", "FrankaPegInsert-Vision-v0", "Name of environment.")
+flags.DEFINE_string("env", "FrankaEnv-Vision-v0", "Name of environment.")
 flags.DEFINE_string("agent", "drq", "Name of agent.")
 flags.DEFINE_string("exp_name", None, "Name of the experiment for wandb logging.")
 flags.DEFINE_integer("max_traj_length", 100, "Maximum length of trajectory.")
@@ -57,13 +58,7 @@ flags.DEFINE_integer("steps_per_update", 30, "Number of steps per update the ser
 
 flags.DEFINE_integer("log_period", 10, "Logging period.")
 flags.DEFINE_integer("eval_period", 2000, "Evaluation period.")
-flags.DEFINE_integer(
-    "actor_joint_reset_every",
-    40,
-    "Force a joint reset every N completed actor episodes to prevent posture drift.",
 
-
-)
 # flag to indicate if this is a leaner or a actor
 flags.DEFINE_boolean("learner", False, "Is this a learner or a trainer.")
 flags.DEFINE_boolean("actor", False, "Is this a learner or a trainer.")
@@ -107,7 +102,42 @@ def print_green(x):
 ##############################################################################
 
 
-def actor(agent: DrQAgent, data_store, env, sampling_rng):
+def flip_transition_horizontally(transition, image_keys, y_obs_idx):
+    """
+    Create a horizontally flipped version of a transition.
+    
+    Args:
+        transition: Dictionary with keys 'observations', 'next_observations', etc.
+        image_keys: List of keys that contain images (e.g., ['image', 'depth'])
+        y_obs_idx: Array indices of y-position in the state vector
+    
+    Returns:
+        flipped_transition: A new transition dict with horizontally flipped images and adjusted x-positions
+    """
+    flipped_transition = copy.deepcopy(transition)
+    
+    # Flip images horizontally (assumes width is second-to-last dimension)
+    for key in image_keys:
+        if key in flipped_transition["observations"]:
+            flipped_transition["observations"][key] = np.flip(
+                flipped_transition["observations"][key], axis=-2
+            )
+        if key in flipped_transition["next_observations"]:
+            flipped_transition["next_observations"][key] = np.flip(
+                flipped_transition["next_observations"][key], axis=-2
+            )
+    
+    # Flip x-position in state (negate x coordinates)
+    flipped_transition["observations"][y_obs_idx] = -flipped_transition["observations"][y_obs_idx]
+    flipped_transition["next_observations"][y_obs_idx] = -flipped_transition["next_observations"][y_obs_idx]
+    
+    return flipped_transition
+
+
+##############################################################################
+
+
+def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx):
     """
     This is the actor loop, which runs when "--actor" is set to True.
     """
@@ -172,7 +202,6 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
     # training loop
     timer = Timer()
     running_return = 0.0
-    episodes = 0
 
     for step in tqdm.tqdm(range(FLAGS.max_steps), dynamic_ncols=True):
         timer.tick("total")
@@ -208,21 +237,19 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng):
                 masks=1.0 - done,
                 dones=done,
             )
+            # Insert original transition
             data_store.insert(transition)
+            
+            # Insert horizontally flipped transition for augmentation
+            flipped_transition = flip_transition_horizontally(transition, image_keys, y_obs_idx)
+            data_store.insert(flipped_transition)
 
             obs = next_obs
             if done or truncated:
-                episodes += 1
                 stats = {"train": info}  # send stats to the learner to log
                 client.request("send-stats", stats)
                 running_return = 0.0
-                # Peg insertion can accumulate controller/frame bias over repeated
-                # contact-rich episodes. Periodic joint resets keep the arm upright.
-                do_joint_reset = (
-                    FLAGS.actor_joint_reset_every > 0
-                    and episodes % FLAGS.actor_joint_reset_every == 0
-                )
-                obs, _ = env.reset(joint_reset=do_joint_reset)
+                obs, _ = env.reset()
 
         if step % FLAGS.steps_per_update == 0:
             client.update()
@@ -387,10 +414,8 @@ def main(_):
     # tcp_pose.x:  4 <-- rel_frame.x points to base.+y
     # tcp_pose.y:  5 <-- rel_frame.y points to base.+x
     # tcp_pose.z:  6 <-- rel_frame.z points to base.-z
-    x_obs_idx = np.array([4], dtype=np.int32)
-    y_obs_idx = np.array([5], dtype=np.int32)
-    y_state_reflect_idx = np.array([2, 5, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
-    y_action_reflect_idx = np.array([1], dtype=np.int32)
+    x_obs_idx = np.array([4])
+    y_obs_idx = np.array([5])
     
     if FLAGS.learner:
         sampling_rng = jax.device_put(sampling_rng, device=sharding.replicate())
@@ -409,8 +434,6 @@ def main(_):
             workspace_width=FLAGS.workspace_width,
             x_obs_idx=x_obs_idx,
             y_obs_idx=y_obs_idx,
-            y_state_reflect_idx=y_state_reflect_idx,
-            y_action_reflect_idx=y_action_reflect_idx,
             # preload_rlds_path=FLAGS.preload_rlds_path,
             image_keys=image_keys,
         )
@@ -429,8 +452,6 @@ def main(_):
             workspace_width=FLAGS.workspace_width,
             x_obs_idx=x_obs_idx,
             y_obs_idx=y_obs_idx,
-            y_state_reflect_idx=y_state_reflect_idx,
-            y_action_reflect_idx=y_action_reflect_idx,
             # preload_rlds_path=FLAGS.preload_rlds_path,
             image_keys=image_keys,
         )
@@ -458,7 +479,7 @@ def main(_):
 
         # actor loop
         print_green("starting actor loop")
-        actor(agent, data_store, env, sampling_rng)
+        actor(agent, data_store, env, sampling_rng, image_keys, y_obs_idx)
 
     else:
         raise NotImplementedError("Must be either a learner or an actor")
