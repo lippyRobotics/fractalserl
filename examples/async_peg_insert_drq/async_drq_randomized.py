@@ -58,6 +58,11 @@ flags.DEFINE_integer("steps_per_update", 30, "Number of steps per update the ser
 
 flags.DEFINE_integer("log_period", 10, "Logging period.")
 flags.DEFINE_integer("eval_period", 2000, "Evaluation period.")
+flags.DEFINE_float(
+    "updates_per_min_period_sec",
+    30.0,
+    "Wall-clock period (seconds) to report learner updates/min.",
+)
 
 # flag to indicate if this is a leaner or a actor
 flags.DEFINE_boolean("learner", False, "Is this a learner or a trainer.")
@@ -128,8 +133,9 @@ def flip_transition_horizontally(transition, image_keys, y_obs_idx):
             )
     
     # Flip y-position in state (negate y coordinates)
-    flipped_transition["observations"]["state"][y_obs_idx] = -flipped_transition["observations"]["state"][y_obs_idx]
-    flipped_transition["next_observations"]["state"][y_obs_idx] = -flipped_transition["next_observations"]["state"][y_obs_idx]
+    # Use ellipsis to handle any leading dimensions (batch, time, etc.)
+    flipped_transition["observations"]["state"][..., y_obs_idx] = -flipped_transition["observations"]["state"][..., y_obs_idx]
+    flipped_transition["next_observations"]["state"][..., y_obs_idx] = -flipped_transition["next_observations"]["state"][..., y_obs_idx]
     
     return flipped_transition
 
@@ -277,6 +283,9 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
 
     # To track the step in the training loop
     update_steps = 0
+    upm_start_time = time.time()
+    upm_last_time = upm_start_time
+    upm_last_step = 0
 
     def stats_callback(type: str, payload: dict) -> dict:
         """Callback for when server receives stats request."""
@@ -362,6 +371,34 @@ def learner(rng, agent: DrQAgent, replay_buffer, demo_buffer):
             )
 
         update_steps += 1
+
+        # Report rolling learner throughput in updates/min using wall-clock time.
+        now = time.time()
+        dt = now - upm_last_time
+        if dt >= FLAGS.updates_per_min_period_sec:
+            d_updates = update_steps - upm_last_step
+            rolling_upm = (d_updates / dt) * 60.0 if dt > 0 else 0.0
+
+            total_dt = now - upm_start_time
+            lifetime_upm = (update_steps / total_dt) * 60.0 if total_dt > 0 else 0.0
+
+            perf_stats = {
+                "perf/updates_per_min": rolling_upm,
+                "perf/updates_per_min_lifetime": lifetime_upm,
+                "perf/learner_updates": update_steps,
+                "perf/learner_elapsed_min": total_dt / 60.0,
+            }
+            if wandb_logger:
+                wandb_logger.log(perf_stats, step=update_steps)
+
+            print(
+                f"learner update_steps={update_steps} "
+                f"updates/min={rolling_upm:.2f} "
+                f"lifetime_updates/min={lifetime_upm:.2f}"
+            )
+
+            upm_last_time = now
+            upm_last_step = update_steps
 
 
 ##############################################################################
