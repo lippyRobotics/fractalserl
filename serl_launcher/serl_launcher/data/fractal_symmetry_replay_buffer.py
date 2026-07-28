@@ -34,13 +34,6 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         self.x_obs_idx = x_obs_idx
         self.y_obs_idx = y_obs_idx
 
-        self.y_state_reflect_idx = np.asarray(
-            kwargs.pop("y_state_reflect_idx", self.y_obs_idx), dtype=np.int32
-        )
-        self.y_action_reflect_idx = np.asarray(
-            kwargs.pop("y_action_reflect_idx", np.array([1], dtype=np.int32)), dtype=np.int32
-        )
-
         # Set initial fractal config values
         self.timestep = 0
         self.current_depth = 0
@@ -327,20 +320,12 @@ class FractalSymmetryReplayBuffer(ReplayBuffer):
         # Transform transitions
         # num_transforms = self.current_branch_count ** 2
         num_transforms = self.transform_deltas.shape[0]
-        reflected_transform_start = num_transforms // 2
-
 
         obs_shape = np.ones(len(obs.shape) + 1, dtype=int)
         obs_shape[0] = num_transforms
         obs = np.tile(obs, obs_shape)
         n_obs = np.tile(n_obs, obs_shape)
         actions = np.tile(actions, (num_transforms, 1))
-
-        if self.y_state_reflect_idx.size:
-            obs[reflected_transform_start:, ..., self.y_state_reflect_idx] *= -1
-            n_obs[reflected_transform_start:, ..., self.y_state_reflect_idx] *= -1
-        if self.y_action_reflect_idx.size:
-            actions[reflected_transform_start:, ..., self.y_action_reflect_idx] *= -1
 
         rewards = np.tile(rewards, num_transforms)
         masks = np.tile(masks, num_transforms)
