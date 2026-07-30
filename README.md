@@ -20,19 +20,17 @@ Contributions in this repo include:
 - **nAUC Performance Metric**: Using normalized Area under the Curve (nAUC) as a trajectory-wide performance metric to capture combined contributions of sample efficiency and policy performance throughout training.
 - **Homographies**: for image warping during sample-time for fixed global cameras when undergoing symmetrical transformations.
 
-<figure>
-      <img src="docs/images/peg_insert_training.png" width="100%">
-      <img src="docs/images/cable_routing_training.png" width="100%">
-      <img src="docs/images/obj_rel_training.png" width="100%">
-</figure>
-
-<!-- <figure>
-      <img src="docs/images/fetch_rewards_function_grid_size.png" alt="SymmGrid returns as a function of grid size" width="100%">
-</figure>
-
-<figure>
-      <img src="docs/images/fractal_grid.png" alt="Fractal grid enclosed by the blue blobs" width="100%">
-</figure> -->
+<p align="center">
+  <img src="docs/images/peg_insert_training.png"
+       alt="Peg insertion training"
+       width="32%">
+  <img src="docs/images/cable_routing_training.png"
+       alt="Cable routing training"
+       width="32%">
+  <img src="docs/images/obj_rel_training.png"
+       alt="Object relocation training"
+       width="32%">
+</p>
 
 Navigation
 ----------
@@ -58,21 +56,23 @@ Citation
 If you use FractalSERL in your research, please cite our paper:
 
 ```bibtex
-@misc{vanderstelt2026SymmGrid,
-      title={Towards Accelerating Deep Reinforcement Learning via Branched Symmetries},
-      author={Ryan Vanderstelt, Cleiver Ruiz Martinez, Caeden Rosen, Blake Hull, and Juan Rojas},
+@misc{everett2026symmGrid,
+      title={SymmGrid: Super-Scaling On-Robot Learning with Parallelized Symmetries and Egocentric–Exocentric Visual Perception.},
+      author={Gabe Everett, Brice Gunter, Ryan Vander Stelt, Cleiver Ruiz-Martinez, Blake Hull and Juan Rojas },
       year={2026},
-      eprint={____},
+      eprint={2607.26985},
       archivePrefix={arXiv},
       primaryClass={cs.RO}
-}
+      }
 
-@misc{luo2024serl,
-      title={SERL: A Software Suite for Sample-Efficient Robotic Reinforcement Learning},
-      author={Jianlan Luo and Zheyuan Hu and Charles Xu and You Liang Tan and Jacob Berg and Archit Sharma and Stefan Schaal and Chelsea Finn and Abhishek Gupta and Sergey Levine},
-      year={2024},
-      eprint={2401.16013},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO}
+@article{vanderstelt2026SymmGrid,
+    author={Vander Stelt, Ryan  and Ruiz-Martinez, Cleiver I. and Rosen, Caeden  and Hull, Blake  and Rojas, Juan },
+    title={Exploring deep reinforcement learning acceleration by superscaling data augmentation via branched fractal symmetries},
+    journal={Frontiers in Robotics and AI},
+    volume={Volume 13 - 2026},
+    year={2026},
+    url={https://www.frontiersin.org/journals/robotics-and-ai/articles/10.3389/frobt.2026.1791812},
+    doi={10.3389/frobt.2026.1791812},
+    issn={2296-9144},
 }
 ```
