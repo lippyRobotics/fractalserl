@@ -14,10 +14,11 @@ Short description
 FractalSERL implements Branched Euclidean Group Fractal Symmetries — a trajectory-level augmentation framework that accelerates policy learning by iteratively applying affine and Euclidean-group transformations to episodic trajectories. Treating an episodic MDP as a tree of state–action pairs, self-similar branching produces fractal symmetry expansions that populate replay buffers with diverse, consistent experiences. We demonstrate improvements on simulated and real Franka manipulation tasks, achieving robust policies in as little as 14 minutes (avg. ~20 minutes) of wall-clock training.
 
 Contributions in this repo include:
-- **SymmGrid Framework**: A preliminary research implementation of fractal symmetry for deep reinforcement learning, demonstrating how branched symmetries accelerate DRL policy learning in physical robots.
-- **Data Augmentation via Super-Scaling**: Efficient robot data generation through trajectory-level augmentation that significantly speeds up policy learning while improving performance and consistency on physical hardware.
+- **Fractal SERL Framework**: A preliminary research implementation of fractal symmetry for deep reinforcement learning, demonstrating how branched symmetries accelerate DRL policy learning in physical robots.
+- **SymmGrid**: Efficient robot data generation through trajectory-level parallelized symmetric transformations that significantly speed up policy learning while improving performance and consistency on physical hardware.
 - **Fractal Symmetry Replay Buffer**: An Optimized Datastore and Replay Buffer implementation designed to support parallelized computations and image handling without excessive memory overhead, enabling faster training iterations.
 - **nAUC Performance Metric**: Using normalized Area under the Curve (nAUC) as a trajectory-wide performance metric to capture combined contributions of sample efficiency and policy performance throughout training.
+- **Homographies**: for image warping during sample-time for fixed global cameras when undergoing symmetrical transformations.
 
 
 <figure>
