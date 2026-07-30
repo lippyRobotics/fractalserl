@@ -11,7 +11,7 @@
 Short description
 -----------------
 
-FractalSERL implements Branched Euclidean Group Fractal Symmetries — a trajectory-level augmentation framework that accelerates policy learning by iteratively applying affine and Euclidean-group transformations to episodic trajectories. Treating an episodic MDP as a tree of state–action pairs, self-similar branching produces fractal symmetry expansions that populate replay buffers with diverse, consistent experiences. We demonstrate improvements on simulated and real Franka manipulation tasks, achieving robust policies in as little as 14 minutes (avg. ~20 minutes) of wall-clock training.
+FractalSERL implements Branched Euclidean Group Fractal Symmetries — a trajectory-level augmentation framework that accelerates policy learning by iteratively applying affine and Euclidean-group transformations to episodic trajectories. Treating an episodic MDP as a tree of state–action pairs, self-similar branching produces fractal symmetry expansions that populate replay buffers with diverse, consistent experiences. Homographies are generated sample time for fixed global cameras in tasks like object relocation. We demonstrate improvements on simulated and real Franka manipulation tasks, achieving robust policies in as little as 14 minutes (avg. ~20 minutes) of wall-clock training.
 
 Contributions in this repo include:
 - **Fractal SERL Framework**: A preliminary research implementation of fractal symmetry for deep reinforcement learning, demonstrating how branched symmetries accelerate DRL policy learning in physical robots.
@@ -31,6 +31,17 @@ Contributions in this repo include:
        alt="Object relocation training"
        width="32%">
 </p>
+
+Updates
+----------
+Aug. 2026 - The code continues to experience continuous improvement. 
+Jul. 2026 - Homographies were created in a separate branch. Still need merging.
+
+Cooperation
+----------
+- If you are interested in collaboration, please reach out.
+- Needed: help to port the Franka SERL robot controllers to ROS2.
+
 
 Navigation
 ----------
