@@ -20,9 +20,10 @@ Contributions in this repo include:
 - **nAUC Performance Metric**: Using normalized Area under the Curve (nAUC) as a trajectory-wide performance metric to capture combined contributions of sample efficiency and policy performance throughout training.
 - **Homographies**: for image warping during sample-time for fixed global cameras when undergoing symmetrical transformations.
 
-
 <figure>
-      <img src="docs/images/cable-success-rate-with-robot.png" width="100%">
+      <img src="docs/images/peg_insert_training.png" width="100%">
+      <img src="docs/images/cable_routing_training.png" width="100%">
+      <img src="docs/images/obj_rel_training.png" width="100%">
 </figure>
 
 <!-- <figure>
