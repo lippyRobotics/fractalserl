@@ -1,4 +1,4 @@
-# FractalSerl — Fractal Symmetries for Sample-Efficient Robotic Learning
+# Fractal SERL | SymmGrid — Fractal/Branched Symmetries for Sample-Efficient Robotic Learning
 
 [![Discord](https://img.shields.io/discord/1302866684612444190?label=Join%20Us%20on%20Discord&logo=discord&color=7289da)](https://discord.com/invite/bAxjvvJzNM)
 [![Notion](https://img.shields.io/badge/Notion-Workspace-000000?logo=notion&logoColor=white)](https://lipscomb-robotics.notion.site/?source=copy_link)
