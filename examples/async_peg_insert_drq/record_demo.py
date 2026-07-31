@@ -28,29 +28,40 @@ def flip_transition_horizontally(
     invert_action_indices=None,
 ):
     flipped_transition = copy.deepcopy(transition)
-
+    
     # Flip images horizontally (assumes width is second-to-last dimension)
     for key in image_keys:
         if key in flipped_transition["observations"]:
-            flipped_transition["observations"][key] = np.flip(
-                flipped_transition["observations"][key], axis=-2
-            )
-        if key in flipped_transition["next_observations"]:
-            flipped_transition["next_observations"][key] = np.flip(
-                flipped_transition["next_observations"][key], axis=-2
-            )
-
+            if key == "wrist_1":
+                flipped_transition["observations"][key] = np.flip(
+                    flipped_transition["observations"]["wrist_2"], axis=-2
+                )
+                if key in flipped_transition["next_observations"]:
+                    flipped_transition["next_observations"][key] = np.flip(
+                        flipped_transition["next_observations"]["wrist_2"], axis=-2
+                    )
+            if key == "wrist_2":
+                flipped_transition["observations"][key] = np.flip(
+                    flipped_transition["observations"]["wrist_1"], axis=-2
+                )
+                if key in flipped_transition["next_observations"]:
+                    flipped_transition["next_observations"][key] = np.flip(
+                        flipped_transition["next_observations"]["wrist_1"], axis=-2
+                    )
+    
+    # Invert specified state indices (negate values)
+    # Use ellipsis to handle any leading dimensions (batch, time, etc.)
     if invert_state_indices is not None:
         flipped_transition["observations"]["state"][..., invert_state_indices] = -flipped_transition["observations"]["state"][..., invert_state_indices]
         flipped_transition["next_observations"]["state"][..., invert_state_indices] = -flipped_transition["next_observations"]["state"][..., invert_state_indices]
-
-    # Also invert y-position for left-right symmetry.
+    
+    # Also invert y-position (backward compatibility)
     flipped_transition["observations"]["state"][..., y_obs_idx] = -flipped_transition["observations"]["state"][..., y_obs_idx]
     flipped_transition["next_observations"]["state"][..., y_obs_idx] = -flipped_transition["next_observations"]["state"][..., y_obs_idx]
 
     if invert_action_indices is not None:
         flipped_transition["actions"][..., invert_action_indices] = -flipped_transition["actions"][..., invert_action_indices]
-
+    
     return flipped_transition
 
 if __name__ == "__main__":
