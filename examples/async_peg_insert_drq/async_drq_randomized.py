@@ -19,6 +19,7 @@ from serl_launcher.common.evaluation import evaluate
 from serl_launcher.utils.timer_utils import Timer
 from serl_launcher.wrappers.chunking import ChunkingWrapper
 from serl_launcher.utils.train_utils import concat_batches
+from serl_launcher.utils.image_output_test import dump_first_flip_debug_pair
 
 from agentlace.trainer import TrainerServer, TrainerClient
 from agentlace.data.data_store import QueuedDataStore
@@ -105,6 +106,8 @@ def print_green(x):
     return print("\033[92m {}\033[00m".format(x))
 
 
+
+
 ##############################################################################
 
 
@@ -122,20 +125,22 @@ def flip_transition_horizontally(
         if key in flipped_transition["observations"]:
             if key == "wrist_1":
                 flipped_transition["observations"][key] = np.flip(
+                    transition["observations"]["wrist_2"], axis=2
+                ).copy
                     flipped_transition["observations"]["wrist_2"], axis=-2
                 )
                 if key in flipped_transition["next_observations"]:
                     flipped_transition["next_observations"][key] = np.flip(
-                        flipped_transition["next_observations"]["wrist_2"], axis=-2
-                    )
+                        transition["next_observations"]["wrist_2"], axis=2
+                    ).copy
             if key == "wrist_2":
                 flipped_transition["observations"][key] = np.flip(
-                    flipped_transition["observations"]["wrist_1"], axis=-2
-                )
+                    transition["observations"]["wrist_1"], axis=2
+                ).copy
                 if key in flipped_transition["next_observations"]:
                     flipped_transition["next_observations"][key] = np.flip(
-                        flipped_transition["next_observations"]["wrist_1"], axis=-2
-                    )
+                        transition["next_observations"]["wrist_1"], axis=2
+                    ).copy
     
     # Invert specified state indices (negate values)
     # Use ellipsis to handle any leading dimensions (batch, time, etc.)
