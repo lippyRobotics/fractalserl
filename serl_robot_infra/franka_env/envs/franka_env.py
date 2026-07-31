@@ -221,13 +221,36 @@ class FrankaEnv(gym.Env):
         done = self.curr_path_length >= self.max_episode_length or reward == 1
         return ob, reward, done, False, {}
 
-    def compute_reward(self, obs, gripper_action_effective) -> bool:
-        """
-        compute_reward() computes a sparse reward. A reward of 1 is given when the current pose and the target pose are within a threshold. 
+    def compute_reward(self, obs, gripper_action_effective) -> float:
+        """Compute the sparse task reward and optional gripper penalty.
 
-        Modification: originallly this code compared the pose and had a significant weakness: the difference between y-angles could sometimes yield values close to 2pi given that we have +pi and -pi discontinuity relative to the peg-insertion orientation. This led to not picking rewards when they should have been produced. 
+        The base reward is one when every position and orientation error is below
+        its configured threshold, and zero otherwise. Orientation error is
+        computed with :meth:`angle_diff` to handle the discontinuity between
+        ``-pi`` and ``pi``. An all-zero reward threshold disables the base reward,
+        which allows a reward-classifier wrapper to provide task success instead.
 
-        We will not separate position and orientation and compute the angle difference with utility method angle_diff.
+        When ``APPLY_GRIPPER_PENALTY`` is enabled, ``GRIPPER_PENALTY`` is
+        subtracted on a step only if the gripper command was effective. An
+        effective command is an accepted open-to-closed or closed-to-open state
+        transition: it crosses the binary action threshold and is not rejected by
+        the 1.5-second command rate limit. Neutral, repeated-state, rate-limited,
+        and failed commands are not penalized.
+
+        Args:
+            obs: Current observation. ``obs["state"]["tcp_pose"]`` must contain
+                the TCP position followed by its quaternion orientation.
+            gripper_action_effective: Whether this step successfully issued a
+                gripper command that changed the commanded binary gripper state.
+
+        Returns:
+            The base reward (zero or one), minus the configured gripper penalty
+            when applicable.
+
+        Note:
+            If a gripper transition occurs on a base-success step, the returned
+            reward is less than one. Consequently, the caller's ``reward == 1``
+            success termination condition does not fire on that step.
         """
         
         # Get cartesian and quaternion pose information

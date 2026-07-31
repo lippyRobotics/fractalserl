@@ -875,6 +875,7 @@ def _require_mapping(
 
     if not isinstance(value, Mapping):
         raise ValueError(f"{name} must be an object.")
+    
     actual_keys = set(value)
     if actual_keys != keys:
         missing = sorted(keys - actual_keys)

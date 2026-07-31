@@ -9,7 +9,9 @@ does exactly that: it takes one image, builds the same branch translations used
 by the fractal replay buffer, applies the corresponding image homographies, and
 writes a single grid image.
 
-Typical usage for a 128x128 replay-buffer image:
+System will resize any incoming image to an 128x128 image as this is what is currently 
+used in our system using cv2.resize(). It is best if the image is natively this dimension 
+to avoid distortions.
 
     python examples/async_bin_relocation_fwbw_drq/homography/homography_transformed_image_stand_alone_test.py \
         --image_path /path/to/front.png \
@@ -47,11 +49,12 @@ from serl_launcher.utils.homography import (
 
 
 DEFAULT_CALIBRATION_PATH = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[1] # Extract the absolute path of the immediate parent
     / "calibrations"
     / "front_homography.json"
 )
 INTERPOLATION_BY_NAME = {
+    "min_distort": cv2.INTER_AREA,
     "nearest": cv2.INTER_NEAREST,
     "linear": cv2.INTER_LINEAR,
     "cubic": cv2.INTER_CUBIC,
@@ -112,16 +115,24 @@ def read_image(path: Path) -> np.ndarray:
 
     if not path.exists():
         raise FileNotFoundError(f"Image does not exist: {path}")
-    image = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+    
+    image = cv2.imread(str(path), cv2.IMREAD_UNCHANGED) # load the image as is, including alpha channel if present
+
     if image is None:
         raise ValueError(f"OpenCV could not read image: {path}")
+    
     if image.ndim == 2:
         image = image[..., None]
+
     if image.ndim != 3 or image.shape[2] not in (1, 3, 4):
+
         raise ValueError(
             "Expected a grayscale, BGR, or BGRA image; "
             f"got shape {image.shape}."
         )
+    
+    # Resize the image
+    image = cv2.resize(image,(128,128), cv2.INTER_AREA)
     return image
 
 
@@ -151,6 +162,7 @@ def load_front_homography(
 
     if not path.exists():
         raise FileNotFoundError(f"Calibration artifact does not exist: {path}")
+    
     artifact = json.loads(path.read_text(encoding="utf-8"))
     validate_calibration_artifact(artifact)
 
@@ -159,6 +171,7 @@ def load_front_homography(
         world_M,
         relativeXY_to_worldXY,
     )
+
     geometry_key = "target_size_hw" if homography_key == "M_target" else "raw_size_hw"
     expected_size_hw = tuple(int(v) for v in artifact["image_geometry"][geometry_key])
     return front_M, expected_size_hw, artifact
@@ -186,6 +199,7 @@ def generate_translation_deltas_xy(
 
     if branch_count <= 0:
         raise ValueError("--branch_count must be positive.")
+    
     if workspace_width <= 0:
         raise ValueError("--workspace_width must be positive.")
 
@@ -196,6 +210,7 @@ def generate_translation_deltas_xy(
     x_deltas = (2 * x_indices + 1) * workspace_width / (2 * branch_count)
     y_deltas = (2 * y_indices + 1) * workspace_width / (2 * branch_count)
     base_diff = -workspace_width / 2.0
+
     return np.stack(
         (base_diff + x_deltas, base_diff + y_deltas),
         axis=1,
