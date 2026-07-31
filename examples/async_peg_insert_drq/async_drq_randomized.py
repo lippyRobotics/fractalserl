@@ -600,6 +600,49 @@ def main(_):
             trajs = pkl.load(f)
             for traj in trajs:
                 demo_buffer.insert(traj)
+
+                # Also insert a horizontally flipped copy of the demo trajectory/transition
+                try:
+                    # same mirror indices used for actor augmentation
+                    invert_indices = np.array([2, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
+                    invert_action_indices = np.array([1, 3, 5], dtype=np.int32)
+
+                    # If traj is a mapping representing a single transition
+                    if isinstance(traj, dict) and "observations" in traj:
+                        flipped = flip_transition_horizontally(
+                            traj,
+                            image_keys,
+                            y_obs_idx,
+                            invert_state_indices=invert_indices,
+                            invert_action_indices=invert_action_indices,
+                        )
+                        demo_buffer.insert(flipped)
+                    else:
+                        # Otherwise assume traj is a sequence of transitions
+                        try:
+                            flipped_traj = []
+                            for t in traj:
+                                if isinstance(t, dict) and "observations" in t:
+                                    flipped_traj.append(
+                                        flip_transition_horizontally(
+                                            t,
+                                            image_keys,
+                                            y_obs_idx,
+                                            invert_state_indices=invert_indices,
+                                            invert_action_indices=invert_action_indices,
+                                        )
+                                    )
+                                else:
+                                    # can't flip this element, keep original
+                                    flipped_traj.append(t)
+                                    raise Exception(f"Cannot flip element of trajectory: {t}")
+                            demo_buffer.insert(flipped_traj)
+                        except Exception:
+                            # fallback: skip flipping if structure unexpected
+                            pass
+                except Exception:
+                    # Be conservative: don't crash demo loading on flip errors
+                    pass
         print(f"demo buffer size: {len(demo_buffer)}")
 
         # learner loop
