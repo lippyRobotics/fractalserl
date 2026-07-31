@@ -19,6 +19,40 @@ from serl_launcher.wrappers.serl_obs_wrappers import SERLObsWrapper
 
 from serl_launcher.wrappers.chunking import ChunkingWrapper
 
+
+def flip_transition_horizontally(
+    transition,
+    image_keys,
+    y_obs_idx,
+    invert_state_indices=None,
+    invert_action_indices=None,
+):
+    flipped_transition = copy.deepcopy(transition)
+
+    # Flip images horizontally (assumes width is second-to-last dimension)
+    for key in image_keys:
+        if key in flipped_transition["observations"]:
+            flipped_transition["observations"][key] = np.flip(
+                flipped_transition["observations"][key], axis=-2
+            )
+        if key in flipped_transition["next_observations"]:
+            flipped_transition["next_observations"][key] = np.flip(
+                flipped_transition["next_observations"][key], axis=-2
+            )
+
+    if invert_state_indices is not None:
+        flipped_transition["observations"]["state"][..., invert_state_indices] = -flipped_transition["observations"]["state"][..., invert_state_indices]
+        flipped_transition["next_observations"]["state"][..., invert_state_indices] = -flipped_transition["next_observations"]["state"][..., invert_state_indices]
+
+    # Also invert y-position for left-right symmetry.
+    flipped_transition["observations"]["state"][..., y_obs_idx] = -flipped_transition["observations"]["state"][..., y_obs_idx]
+    flipped_transition["next_observations"]["state"][..., y_obs_idx] = -flipped_transition["next_observations"]["state"][..., y_obs_idx]
+
+    if invert_action_indices is not None:
+        flipped_transition["actions"][..., invert_action_indices] = -flipped_transition["actions"][..., invert_action_indices]
+
+    return flipped_transition
+
 if __name__ == "__main__":
     env = gym.make("FrankaPegInsert-Vision-v0")
     env = GripperCloseEnv(env)
@@ -29,6 +63,12 @@ if __name__ == "__main__":
     env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
 
     obs, _ = env.reset()
+
+    # Variables for flipping transitions
+    image_keys = [k for k in env.observation_space.keys() if k != "state"]
+    invert_state_indices = np.array([2, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
+    invert_action_indices = np.array([1, 3, 5], dtype=np.int32)
+    y_obs_idx = np.array([5], dtype=np.int32)
 
     batch = []
     transitions = []
@@ -71,6 +111,19 @@ if __name__ == "__main__":
         if done:
             if rew:
                 transitions += batch
+
+                # Perform horizontal flip augmentation on the batch of transitions
+                for t in batch:
+                    transitions.append(
+                        flip_transition_horizontally(
+                            t,
+                            image_keys,
+                            y_obs_idx,
+                            invert_state_indices=invert_state_indices,
+                            invert_action_indices=invert_action_indices,
+                        )
+                    )
+
                 success_count += 1
             total_count += 1
 
