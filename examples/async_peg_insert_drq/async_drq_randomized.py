@@ -108,89 +108,6 @@ def print_green(x):
 ##############################################################################
 
 
-_FLIP_DEBUG_DUMP_DONE = False
-
-
-def _prepare_debug_frame(image: np.ndarray) -> np.ndarray:
-    frame = np.asarray(image)
-
-    # Reduce leading batch/time dimensions by taking the first item.
-    while frame.ndim > 3:
-        frame = frame[0]
-
-    if frame.ndim == 3 and frame.shape[0] in (1, 3, 4) and frame.shape[-1] not in (1, 3, 4):
-        frame = np.moveaxis(frame, 0, -1)
-
-    return frame
-
-
-def _to_uint8_for_preview(image: np.ndarray) -> np.ndarray:
-    if image.dtype == np.uint8:
-        return image
-
-    image = image.astype(np.float32)
-    finite_mask = np.isfinite(image)
-    if not finite_mask.any():
-        return np.zeros_like(image, dtype=np.uint8)
-
-    min_v = np.min(image[finite_mask])
-    max_v = np.max(image[finite_mask])
-    if max_v <= min_v:
-        return np.zeros_like(image, dtype=np.uint8)
-
-    image = (image - min_v) / (max_v - min_v)
-    image = np.clip(image * 255.0, 0.0, 255.0)
-    return image.astype(np.uint8)
-
-
-def dump_first_flip_debug_pair(original_image, flipped_image, image_key):
-    global _FLIP_DEBUG_DUMP_DONE
-    if _FLIP_DEBUG_DUMP_DONE:
-        return
-
-    output_dir = os.path.join(os.getcwd(), "flip_debug_output")
-    os.makedirs(output_dir, exist_ok=True)
-
-    original_frame = _prepare_debug_frame(original_image)
-    flipped_frame = _prepare_debug_frame(flipped_image)
-
-    np.save(os.path.join(output_dir, f"{image_key}_original.npy"), original_frame)
-    np.save(os.path.join(output_dir, f"{image_key}_flipped.npy"), flipped_frame)
-
-    if original_frame.ndim == 2:
-        original_preview = original_frame[..., None]
-    else:
-        original_preview = original_frame
-
-    if flipped_frame.ndim == 2:
-        flipped_preview = flipped_frame[..., None]
-    else:
-        flipped_preview = flipped_frame
-
-    if original_preview.shape == flipped_preview.shape:
-        preview_pair = np.concatenate([original_preview, flipped_preview], axis=1)
-        preview_pair = _to_uint8_for_preview(preview_pair)
-        if preview_pair.ndim == 3 and preview_pair.shape[-1] == 1:
-            preview_pair = preview_pair[..., 0]
-
-        try:
-            from PIL import Image
-
-            Image.fromarray(preview_pair).save(
-                os.path.join(output_dir, f"{image_key}_original_vs_flipped.png")
-            )
-        except Exception as exc:
-            print(f"WARNING could not save flip debug PNG: {exc}")
-
-    print(
-        f"Saved one-time flip debug output for '{image_key}' in {output_dir}"
-    )
-    _FLIP_DEBUG_DUMP_DONE = True
-
-
-##############################################################################
-
-
 def flip_transition_horizontally(
     transition,
     image_keys,
@@ -205,11 +122,6 @@ def flip_transition_horizontally(
         if key in flipped_transition["observations"]:
             flipped_transition["observations"][key] = np.flip(
                 flipped_transition["observations"][key], axis=-2
-            )
-            dump_first_flip_debug_pair(
-                transition["observations"][key],
-                flipped_transition["observations"][key],
-                key,
             )
         if key in flipped_transition["next_observations"]:
             flipped_transition["next_observations"][key] = np.flip(
