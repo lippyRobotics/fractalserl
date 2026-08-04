@@ -119,7 +119,12 @@ def flip_transition_horizontally(
     invert_action_indices=None,
 ):
     flipped_transition = copy.deepcopy(transition)
-    
+
+    # Check if both images are present
+    assert "wrist_1" in image_keys and "wrist_2" in image_keys, (
+        f"horizontal flip needs both wrist cameras, got image_keys={image_keys}"
+    )
+
     # Flip images horizontally (assumes width is second-to-last dimension)
     for key in image_keys:
         if key in flipped_transition["observations"]:
