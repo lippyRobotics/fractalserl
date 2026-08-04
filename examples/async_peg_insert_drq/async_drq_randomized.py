@@ -235,6 +235,9 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
     timer = Timer()
     running_return = 0.0
 
+    # Mirrored transitions are inserted together after the episode ends
+    pending_flipped = []
+
     for step in tqdm.tqdm(range(FLAGS.max_steps), dynamic_ncols=True):
         timer.tick("total")
 
@@ -271,22 +274,28 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
             )
             # Insert original transition
             data_store.insert(transition)
-            
-            # Insert horizontally flipped transition for augmentation
+
+            # Queue the horizontally flipped transition for augmentation.
             # Invert mirrored state components and mirrored action components.
             invert_indices = np.array([2, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
             invert_action_indices = np.array([1, 3, 5], dtype=np.int32)
-            flipped_transition = flip_transition_horizontally(
-                transition,
-                image_keys,
-                y_obs_idx,
-                invert_state_indices=invert_indices,
-                invert_action_indices=invert_action_indices,
+            pending_flipped.append(
+                flip_transition_horizontally(
+                    transition,
+                    image_keys,
+                    y_obs_idx,
+                    invert_state_indices=invert_indices,
+                    invert_action_indices=invert_action_indices,
+                )
             )
-            data_store.insert(flipped_transition)
 
             obs = next_obs
             if done or truncated:
+                # Flush the mirrored episode as a contiguous trajectory.
+                for flipped_transition in pending_flipped:
+                    data_store.insert(flipped_transition)
+                pending_flipped.clear()
+
                 stats = {"train": info}  # send stats to the learner to log
                 client.request("send-stats", stats)
                 running_return = 0.0
