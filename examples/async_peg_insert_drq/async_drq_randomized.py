@@ -130,8 +130,8 @@ def flip_transition_horizontally(
         if key in flipped_transition["observations"]:
             if key == "wrist_1":
                 flipped_transition["observations"][key] = np.flip(
-                    transition["observations"]["wrist_2"], axis=2
-                ).copy
+                    transition["observations"]["wrist_1"], axis=2
+                ).copy()
                 # dump_first_flip_debug_pair(
                 #     transition["observations"][key],
                 #     flipped_transition["observations"][key],
@@ -139,16 +139,16 @@ def flip_transition_horizontally(
                 # )
                 if key in flipped_transition["next_observations"]:
                     flipped_transition["next_observations"][key] = np.flip(
-                        transition["next_observations"]["wrist_2"], axis=2
-                    ).copy
+                        transition["next_observations"]["wrist_1"], axis=2
+                    ).copy()
             if key == "wrist_2":
                 flipped_transition["observations"][key] = np.flip(
-                    transition["observations"]["wrist_1"], axis=2
-                ).copy
+                    transition["observations"]["wrist_2"], axis=2
+                ).copy()
                 if key in flipped_transition["next_observations"]:
                     flipped_transition["next_observations"][key] = np.flip(
-                        transition["next_observations"]["wrist_1"], axis=2
-                    ).copy
+                        transition["next_observations"]["wrist_2"], axis=2
+                    ).copy()
     
     # Invert specified state indices (negate values)
     # Use ellipsis to handle any leading dimensions (batch, time, etc.)
