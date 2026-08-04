@@ -127,8 +127,11 @@ def flip_transition_horizontally(
                 flipped_transition["observations"][key] = np.flip(
                     transition["observations"]["wrist_2"], axis=2
                 ).copy
-                    flipped_transition["observations"]["wrist_2"], axis=-2
-                )
+                # dump_first_flip_debug_pair(
+                #     transition["observations"][key],
+                #     flipped_transition["observations"][key],
+                #     key,
+                # )
                 if key in flipped_transition["next_observations"]:
                     flipped_transition["next_observations"][key] = np.flip(
                         transition["next_observations"]["wrist_2"], axis=2
