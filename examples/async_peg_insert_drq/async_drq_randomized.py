@@ -114,7 +114,6 @@ def print_green(x):
 def flip_transition_horizontally(
     transition,
     image_keys,
-    y_obs_idx,
     invert_state_indices=None,
     invert_action_indices=None,
 ):
@@ -157,8 +156,8 @@ def flip_transition_horizontally(
         flipped_transition["next_observations"]["state"][..., invert_state_indices] = -flipped_transition["next_observations"]["state"][..., invert_state_indices]
     
     # Also invert y-position (backward compatibility)
-    flipped_transition["observations"]["state"][..., y_obs_idx] = -flipped_transition["observations"]["state"][..., y_obs_idx]
-    flipped_transition["next_observations"]["state"][..., y_obs_idx] = -flipped_transition["next_observations"]["state"][..., y_obs_idx]
+    # flipped_transition["observations"]["state"][..., y_obs_idx] = -flipped_transition["observations"]["state"][..., y_obs_idx]
+    # flipped_transition["next_observations"]["state"][..., y_obs_idx] = -flipped_transition["next_observations"]["state"][..., y_obs_idx]
 
     if invert_action_indices is not None:
         flipped_transition["actions"][..., invert_action_indices] = -flipped_transition["actions"][..., invert_action_indices]
@@ -277,17 +276,26 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
 
             # Queue the horizontally flipped transition for augmentation.
             # Invert mirrored state components and mirrored action components.
-            invert_indices = np.array([2, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
-            invert_action_indices = np.array([1, 3, 5], dtype=np.int32)
+            invert_state_indices_x = np.array([2, 5, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
+            invert_state_indices_y = np.array([1, 4, 8, 9, 11, 12, 13, 17, 18], dtype=np.int32)
+            invert_action_indices_x = np.array([1, 3, 5], dtype=np.int32)
+            invert_action_indices_y = np.array([0, 4, 5], dtype=np.int32)
             pending_flipped.append(
                 flip_transition_horizontally(
                     transition,
                     image_keys,
-                    y_obs_idx,
-                    invert_state_indices=invert_indices,
-                    invert_action_indices=invert_action_indices,
+                    invert_state_indices=invert_state_indices_x,
+                    invert_action_indices=invert_action_indices_x,
                 )
             )
+            pending_flipped.append(
+                            flip_transition_horizontally(
+                                transition,
+                                image_keys,
+                                invert_state_indices=invert_state_indices_y,
+                                invert_action_indices=invert_action_indices_y,
+                            )
+                        )
 
             obs = next_obs
             if done or truncated:

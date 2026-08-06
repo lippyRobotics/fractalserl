@@ -23,7 +23,6 @@ from serl_launcher.wrappers.chunking import ChunkingWrapper
 def flip_transition_horizontally(
     transition,
     image_keys,
-    y_obs_idx,
     invert_state_indices=None,
     invert_action_indices=None,
 ):
@@ -59,10 +58,6 @@ def flip_transition_horizontally(
     if invert_state_indices is not None:
         flipped_transition["observations"]["state"][..., invert_state_indices] = -flipped_transition["observations"]["state"][..., invert_state_indices]
         flipped_transition["next_observations"]["state"][..., invert_state_indices] = -flipped_transition["next_observations"]["state"][..., invert_state_indices]
-    
-    # Also invert y-position (backward compatibility)
-    flipped_transition["observations"]["state"][..., y_obs_idx] = -flipped_transition["observations"]["state"][..., y_obs_idx]
-    flipped_transition["next_observations"]["state"][..., y_obs_idx] = -flipped_transition["next_observations"]["state"][..., y_obs_idx]
 
     if invert_action_indices is not None:
         flipped_transition["actions"][..., invert_action_indices] = -flipped_transition["actions"][..., invert_action_indices]
@@ -82,8 +77,10 @@ if __name__ == "__main__":
 
     # Variables for flipping transitions
     image_keys = [k for k in env.observation_space.keys() if k != "state"]
-    invert_state_indices = np.array([2, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
-    invert_action_indices = np.array([1, 3, 5], dtype=np.int32)
+    invert_state_indices_y = np.array([2, 5, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
+    invert_state_indices_x = np.array([1, 4, 8, 9, 11, 12, 13, 17, 18], dtype=np.int32)
+    invert_action_indices_y = np.array([1, 3, 5], dtype=np.int32)
+    invert_action_indices_x = np.array([0, 4, 5], dtype=np.int32)
     y_obs_idx = np.array([5], dtype=np.int32)
 
     batch = []
@@ -127,18 +124,29 @@ if __name__ == "__main__":
         if done:
             if rew:
                 transitions += batch
-
-                # Perform horizontal flip augmentation on the batch of transitions
+                # COPY, MIRROR, AND APPEND TRANSITIONS
+                # =========================================================================
+                # Perform global y-axis flip augmentation on the batch of transitions
                 for t in batch:
                     transitions.append(
                         flip_transition_horizontally(
                             t,
                             image_keys,
-                            y_obs_idx,
-                            invert_state_indices=invert_state_indices,
-                            invert_action_indices=invert_action_indices,
+                            invert_state_indices=invert_state_indices_x,
+                            invert_action_indices=invert_action_indices_x,
                         )
                     )
+                # Perform global x-axis flip augmentation on the batch of transitions
+                for t in batch:
+                    transitions.append(
+                        flip_transition_horizontally(
+                            t,
+                            image_keys,
+                            invert_state_indices=invert_state_indices_y,
+                            invert_action_indices=invert_action_indices_y,
+                        )
+                    )
+                # =========================================================================
 
                 success_count += 1
             total_count += 1
