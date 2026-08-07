@@ -235,7 +235,8 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
     running_return = 0.0
 
     # Mirrored transitions are inserted together after the episode ends
-    pending_flipped = []
+    pending_flipped_x = []
+    pending_flipped_y = []
 
     for step in tqdm.tqdm(range(FLAGS.max_steps), dynamic_ncols=True):
         timer.tick("total")
@@ -280,7 +281,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
             invert_state_indices_y = np.array([1, 4, 8, 9, 11, 12, 13, 17, 18], dtype=np.int32)
             invert_action_indices_x = np.array([1, 3, 5], dtype=np.int32)
             invert_action_indices_y = np.array([0, 4, 5], dtype=np.int32)
-            pending_flipped.append(
+            pending_flipped_x.append(
                 flip_transition_horizontally(
                     transition,
                     image_keys,
@@ -288,7 +289,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
                     invert_action_indices=invert_action_indices_x,
                 )
             )
-            pending_flipped.append(
+            pending_flipped_y.append(
                             flip_transition_horizontally(
                                 transition,
                                 image_keys,
@@ -300,9 +301,12 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
             obs = next_obs
             if done or truncated:
                 # Flush the mirrored episode as a contiguous trajectory.
-                for flipped_transition in pending_flipped:
+                for flipped_transition in pending_flipped_x:
                     data_store.insert(flipped_transition)
-                pending_flipped.clear()
+                pending_flipped_x.clear()
+                for flipped_transition in pending_flipped_y:
+                    data_store.insert(flipped_transition)
+                pending_flipped_y.clear()
 
                 stats = {"train": info}  # send stats to the learner to log
                 client.request("send-stats", stats)

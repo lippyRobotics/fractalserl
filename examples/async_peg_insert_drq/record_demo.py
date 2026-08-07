@@ -77,11 +77,10 @@ if __name__ == "__main__":
 
     # Variables for flipping transitions
     image_keys = [k for k in env.observation_space.keys() if k != "state"]
-    invert_state_indices_y = np.array([2, 5, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
-    invert_state_indices_x = np.array([1, 4, 8, 9, 11, 12, 13, 17, 18], dtype=np.int32)
-    invert_action_indices_y = np.array([1, 3, 5], dtype=np.int32)
-    invert_action_indices_x = np.array([0, 4, 5], dtype=np.int32)
-    y_obs_idx = np.array([5], dtype=np.int32)
+    invert_state_indices_x = np.array([2, 5, 7, 9, 10, 12, 14, 16, 18], dtype=np.int32)
+    invert_state_indices_y = np.array([1, 4, 8, 9, 11, 12, 13, 17, 18], dtype=np.int32)
+    invert_action_indices_x = np.array([1, 3, 5], dtype=np.int32)
+    invert_action_indices_y = np.array([0, 4, 5], dtype=np.int32)
 
     batch = []
     transitions = []
