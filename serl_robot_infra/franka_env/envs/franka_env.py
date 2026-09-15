@@ -422,21 +422,22 @@ class FrankaEnv(gym.Env):
         data = {"arr": arr.tolist()}
         requests.post(self.url + "pose", json=data)
 
-    def _send_gripper_command(self, pos: float, mode="binary", reset=False):
+    def _send_gripper_command(self, pos: float, mode="binary"):
         """Send binary gripper command, but rate-limit physical commands."""
+        # NOTE: Items in this function marked with an exclamation point (!!!) are only used for the object-relocation task.
         if mode != "binary":
             raise NotImplementedError("Continuous gripper control is optional")
 
         now = time.time()
 
         # Rate limit physical gripper commands.
-        if now - self.last_gripper_cmd_time < self.min_gripper_cmd_interval and reset == False:
-            return False
+        # if now - self.last_gripper_cmd_time < self.min_gripper_cmd_interval:  # !!!
+        #     return False                                                      # !!!
 
         try:
             if (
                 pos <= -self.config.BINARY_GRIPPER_THREASHOLD
-                and self.gripper_binary_state == 0
+                # and self.gripper_binary_state == 0                            # !!!
             ):
                 requests.post(self.url + "close_gripper", timeout=1.0)
                 self.gripper_binary_state = 1

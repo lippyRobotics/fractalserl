@@ -238,8 +238,17 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
     pending_flipped_x = []
     pending_flipped_y = []
 
+    # Re-tighten gripper every <close_step_frequency>
+    step_count = 0
+    close_step_frequency = 15
+
     for step in tqdm.tqdm(range(FLAGS.max_steps), dynamic_ncols=True):
         timer.tick("total")
+
+        # Re-tighten gripper
+        if step_count >= close_step_frequency:
+            env._send_gripper_command(0)
+            step_count = 0
 
         with timer.context("sample_actions"):
             if step < FLAGS.random_steps:
