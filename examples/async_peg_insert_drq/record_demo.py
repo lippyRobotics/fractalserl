@@ -5,6 +5,7 @@ import copy
 import pickle as pkl
 import datetime
 import os
+import symminsertion
 
 import franka_env
 
@@ -125,27 +126,19 @@ if __name__ == "__main__":
                 transitions += batch
                 # COPY, MIRROR, AND APPEND TRANSITIONS
                 # =========================================================================
-                # Perform global y-axis flip augmentation on the batch of transitions
-                for t in batch:
-                    transitions.append(
-                        flip_transition_horizontally(
-                            t,
-                            image_keys,
-                            invert_state_indices=invert_state_indices_x,
-                            invert_action_indices=invert_action_indices_x,
-                        )
-                    )
                 # Perform global x-axis flip augmentation on the batch of transitions
-                for t in batch:
-                    transitions.append(
-                        flip_transition_horizontally(
-                            t,
-                            image_keys,
-                            invert_state_indices=invert_state_indices_y,
-                            invert_action_indices=invert_action_indices_y,
-                        )
-                    )
-                # =========================================================================
+                transitions.extend(
+                    symminsertion.reflect_transitions(batch, image_keys, invert_state_indices_x, invert_action_indices_y)
+                )
+                # for t in batch:
+                #     transitions.append(
+                #         flip_transition_horizontally(
+                #             t,
+                #             image_keys,
+                #             invert_state_indices=invert_state_indices_x,
+                #             invert_action_indices=invert_action_indices_x,
+                #         )
+                #     )
 
                 success_count += 1
             total_count += 1
