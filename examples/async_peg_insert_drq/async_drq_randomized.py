@@ -97,6 +97,8 @@ flags.DEFINE_boolean(
     "debug", False, "Debug mode."
 )  # debug mode will disable wandb logging
 
+flags.DEFINE_string("insert_category", None, "Method of inserting transitions (Rx, Ry, RxRy, etc.) ")
+
 devices = jax.local_devices()
 num_devices = len(devices)
 sharding = jax.sharding.PositionalSharding(devices)

@@ -39,6 +39,7 @@ python async_drq_randomized.py "$@" \
     --branching_factor 3 \
     --workspace_width 0.3 \
     --encoder_type resnet-pretrained \
+    --insert_category "Rx" \
     --demo_path symm_0.pkl \
     --checkpoint_period 500 \
     --checkpoint_path "$CHECKPOINT_DIR" \
