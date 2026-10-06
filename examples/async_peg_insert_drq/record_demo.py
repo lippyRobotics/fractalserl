@@ -128,7 +128,7 @@ if __name__ == "__main__":
                 # =========================================================================
                 # Perform global x-axis flip augmentation on the batch of transitions
                 transitions.extend(
-                    symminsertion.reflect_transitions(batch, image_keys, invert_state_indices_x, invert_action_indices_y)
+                    symminsertion.reflect_transitions(batch, image_keys, invert_state_indices_x, invert_action_indices_x)
                 )
                 # for t in batch:
                 #     transitions.append(
