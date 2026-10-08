@@ -1,0 +1,48 @@
+import numpy as np
+import copy
+from scipy.spatial.transform import Rotation
+
+# def rotate_transitions():
+
+def rotate_single_transition(
+    transition,
+    radians,
+):
+    rotated_transition = copy.deepcopy(transition)
+    
+    #==========================================
+    # Gather state/action indices to rotate
+    #==========================================
+    # States
+    state_item_count = 6 # Unique items in robot states (pos, vel, torque, etc.)
+    state_item_count_array = np.arange(state_item_count)
+    dimensions = 3  # Includes (x,y,z) for each item
+    state_indices = dimensions*state_item_count_array[:, None] + np.array([1, 2, 3])
+
+    # Actions
+    action_item_count = 2 # Unique items in robot actions (pos_delta & rot_delta)
+    action_item_count_array = np.arange(state_item_count)
+    action_indices = dimensions*action_item_count_array[:, None] + np.array([1, 2, 3])
+
+    #==========================================
+    # Rotate states/actions
+    #==========================================
+    # States
+    rotation_matrix = Rotation.from_euler('z', radians).as_matrix()
+    state_items = rotated_transition["observations"]["state"][..., state_indices]
+    state_items = state_items.transpose()
+    new_state_items = rotation_matrix @ state_items
+
+    # Actions
+    action_items = rotated_transition["observations"]["action"][..., action_indices]
+    action_items = action_items.transpose()
+    new_action_items = rotation_matrix @ action_items
+
+    #==========================================
+    # Re-place states/actions
+    #==========================================
+    # States
+    rotated_transition["observations"]["state"][..., state_indices] = new_state_items
+
+    # Actions
+    rotated_transition["observations"]["action"][..., action_indices] = new_action_items
