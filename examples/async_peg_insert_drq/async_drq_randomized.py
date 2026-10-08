@@ -40,7 +40,7 @@ from franka_env.envs.wrappers import (
 )
 
 import franka_env
-import symminsertion
+import symm_insertion
 
 FLAGS = flags.FLAGS
 
@@ -284,7 +284,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
             invert_action_indices_x = np.array([1, 3, 5], dtype=np.int32)
             invert_action_indices_y = np.array([0, 4, 5], dtype=np.int32)
             pending_flipped_x.append(
-                symminsertion.reflect_transitions(transition, image_keys, invert_state_indices_x, invert_action_indices_x)
+                symm_insertion.reflect_transitions(transition, image_keys, invert_state_indices_x, invert_action_indices_x)
             )
 
             obs = next_obs

@@ -5,7 +5,7 @@ import copy
 import pickle as pkl
 import datetime
 import os
-import symminsertion
+import examples.async_peg_insert_drq.symm_insertion as symm_insertion
 
 import franka_env
 
@@ -128,7 +128,7 @@ if __name__ == "__main__":
                 # =========================================================================
                 # Perform global x-axis flip augmentation on the batch of transitions
                 transitions.extend(
-                    symminsertion.reflect_transitions(batch, image_keys, invert_state_indices_x, invert_action_indices_x)
+                    symm_insertion.reflect_transitions(batch, image_keys, invert_state_indices_x, invert_action_indices_x)
                 )
                 # for t in batch:
                 #     transitions.append(
