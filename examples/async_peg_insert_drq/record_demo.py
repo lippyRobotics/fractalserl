@@ -21,50 +21,6 @@ from serl_launcher.wrappers.serl_obs_wrappers import SERLObsWrapper
 from serl_launcher.wrappers.chunking import ChunkingWrapper
 
 
-def flip_transition_horizontally(
-    transition,
-    image_keys,
-    invert_state_indices=None,
-    invert_action_indices=None,
-):
-    flipped_transition = copy.deepcopy(transition)
-
-    # Check if both images are present
-    assert "wrist_1" in image_keys and "wrist_2" in image_keys, (
-        f"horizontal flip needs both wrist cameras, got image_keys={image_keys}"
-    )
-
-    # Flip images horizontally (assumes width is second-to-last dimension)
-    for key in image_keys:
-        if key in flipped_transition["observations"]:
-            if key == "wrist_1":
-                flipped_transition["observations"][key] = np.flip(
-                    transition["observations"]["wrist_2"], axis=2
-                ).copy()
-                if key in flipped_transition["next_observations"]:
-                    flipped_transition["next_observations"][key] = np.flip(
-                        transition["next_observations"]["wrist_2"], axis=2
-                    ).copy()
-            if key == "wrist_2":
-                flipped_transition["observations"][key] = np.flip(
-                    transition["observations"]["wrist_1"], axis=2
-                ).copy()
-                if key in flipped_transition["next_observations"]:
-                    flipped_transition["next_observations"][key] = np.flip(
-                        transition["next_observations"]["wrist_1"], axis=2
-                    ).copy()
-    
-    # Invert specified state indices (negate values)
-    # Use ellipsis to handle any leading dimensions (batch, time, etc.)
-    if invert_state_indices is not None:
-        flipped_transition["observations"]["state"][..., invert_state_indices] = -flipped_transition["observations"]["state"][..., invert_state_indices]
-        flipped_transition["next_observations"]["state"][..., invert_state_indices] = -flipped_transition["next_observations"]["state"][..., invert_state_indices]
-
-    if invert_action_indices is not None:
-        flipped_transition["actions"][..., invert_action_indices] = -flipped_transition["actions"][..., invert_action_indices]
-    
-    return flipped_transition
-
 if __name__ == "__main__":
     env = gym.make("FrankaPegInsert-Vision-v0")
     env = GripperCloseEnv(env)
@@ -130,15 +86,6 @@ if __name__ == "__main__":
                 transitions.extend(
                     symm_insertion.reflect_transitions(batch, image_keys, invert_state_indices_x, invert_action_indices_x)
                 )
-                # for t in batch:
-                #     transitions.append(
-                #         flip_transition_horizontally(
-                #             t,
-                #             image_keys,
-                #             invert_state_indices=invert_state_indices_x,
-                #             invert_action_indices=invert_action_indices_x,
-                #         )
-                #     )
 
                 success_count += 1
             total_count += 1
