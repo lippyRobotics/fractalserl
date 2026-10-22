@@ -5,7 +5,8 @@ import copy
 import pickle as pkl
 import datetime
 import os
-import examples.async_peg_insert_drq.symm_insertion as symm_insertion
+import symm_insertion
+import rotation_insertion
 
 import franka_env
 
