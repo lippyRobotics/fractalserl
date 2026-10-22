@@ -41,6 +41,7 @@ from franka_env.envs.wrappers import (
 
 import franka_env
 import symm_insertion
+import rotation_insertion
 
 FLAGS = flags.FLAGS
 
@@ -177,6 +178,7 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
 
     # Mirrored transitions are inserted together after the episode ends
     pending_flipped_x = []
+    pending_rotated_45 = []
     pending_flipped_y = []
 
     # Re-tighten gripper every <close_step_frequency>
@@ -230,16 +232,22 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
             invert_state_indices_y = np.array([1, 4, 8, 9, 11, 12, 13, 17, 18], dtype=np.int32)
             invert_action_indices_x = np.array([1, 3, 5], dtype=np.int32)
             invert_action_indices_y = np.array([0, 4, 5], dtype=np.int32)
-            pending_flipped_x.append(
-                symm_insertion.reflect_transitions(transition, image_keys, invert_state_indices_x, invert_action_indices_x)
+            # pending_flipped_x.append(
+            #     symm_insertion.reflect_transitions(transition, image_keys, invert_state_indices_x, invert_action_indices_x)
+            # )
+            pending_rotated_45.append(
+                rotation_insertion.rotate_transitions(transition, (np.pi / 4))
             )
 
             obs = next_obs
             if done or truncated:
                 # Flush the mirrored episode as a contiguous trajectory.
-                for flipped_transition in pending_flipped_x:
-                    data_store.insert(flipped_transition)
-                pending_flipped_x.clear()
+                # for flipped_transition in pending_flipped_x:
+                #     data_store.insert(flipped_transition)
+                # pending_flipped_x.clear()
+                for rotated_transition in pending_rotated_45:
+                    data_store.insert(rotated_transition)
+                pending_rotated_45.clear()
                 # for flipped_transition in pending_flipped_y:
                 #     data_store.insert(flipped_transition)
                 # pending_flipped_y.clear()

@@ -80,11 +80,13 @@ if __name__ == "__main__":
         if done:
             if rew:
                 transitions += batch
-                # COPY, MIRROR, AND APPEND TRANSITIONS
-                # =========================================================================
-                # Perform global x-axis flip augmentation on the batch of transitions
+                # MIRROR OR ROTATE TRANSITIONS
+                # =================================
+                # transitions.extend(
+                #     symm_insertion.reflect_transitions(batch, image_keys, invert_state_indices_x, invert_action_indices_x)
+                # )
                 transitions.extend(
-                    symm_insertion.reflect_transitions(batch, image_keys, invert_state_indices_x, invert_action_indices_x)
+                    rotation_insertion.rotate_transitions(batch, (np.pi/4))
                 )
 
                 success_count += 1
