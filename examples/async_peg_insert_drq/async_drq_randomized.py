@@ -109,59 +109,6 @@ def print_green(x):
     return print("\033[92m {}\033[00m".format(x))
 
 
-
-
-##############################################################################
-
-
-def flip_transition_horizontally(
-    transition,
-    image_keys,
-    invert_state_indices=None,
-    invert_action_indices=None,
-):
-    flipped_transition = copy.deepcopy(transition)
-
-    # Check if both images are present
-    assert "wrist_1" in image_keys and "wrist_2" in image_keys, (
-        f"horizontal flip needs both wrist cameras, got image_keys={image_keys}"
-    )
-
-    # Flip images horizontally (assumes width is second-to-last dimension)
-    for key in image_keys:
-        if key in flipped_transition["observations"]:
-            if key == "wrist_1":
-                flipped_transition["observations"][key] = np.flip(
-                    transition["observations"]["wrist_2"], axis=2
-                ).copy()
-                if key in flipped_transition["next_observations"]:
-                    flipped_transition["next_observations"][key] = np.flip(
-                        transition["next_observations"]["wrist_2"], axis=2
-                    ).copy()
-            if key == "wrist_2":
-                flipped_transition["observations"][key] = np.flip(
-                    transition["observations"]["wrist_1"], axis=2
-                ).copy()
-                if key in flipped_transition["next_observations"]:
-                    flipped_transition["next_observations"][key] = np.flip(
-                        transition["next_observations"]["wrist_1"], axis=2
-                    ).copy()
-    
-    # Invert specified state indices (negate values)
-    # Use ellipsis to handle any leading dimensions (batch, time, etc.)
-    if invert_state_indices is not None:
-        flipped_transition["observations"]["state"][..., invert_state_indices] = -flipped_transition["observations"]["state"][..., invert_state_indices]
-        flipped_transition["next_observations"]["state"][..., invert_state_indices] = -flipped_transition["next_observations"]["state"][..., invert_state_indices]
-
-    if invert_action_indices is not None:
-        flipped_transition["actions"][..., invert_action_indices] = -flipped_transition["actions"][..., invert_action_indices]
-    
-    return flipped_transition
-
-
-##############################################################################
-
-
 def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx):
     """
     This is the actor loop, which runs when "--actor" is set to True.
