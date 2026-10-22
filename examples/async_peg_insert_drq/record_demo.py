@@ -58,8 +58,16 @@ if __name__ == "__main__":
         raise FileExistsError(f"{file_name} already exists in {file_dir}")
     if not os.access(file_dir, os.W_OK):
         raise PermissionError(f"No permission to write to {file_dir}")
+    
+    # Re-tighten gripper every <close_step_frequency>
+    step_count = 0
+    close_step_frequency = 15
 
     while success_count < success_needed:
+        # Re-tighten gripper
+        if step_count >= close_step_frequency:
+            env._send_gripper_command(0)
+            step_count = 0
         actions = np.zeros((6,))
         next_obs, rew, done, truncated, info = env.step(action=actions)
         if "intervene_action" in info:
