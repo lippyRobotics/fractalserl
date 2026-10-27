@@ -60,6 +60,8 @@ def rotate_single_transition(
     new_state_items = rotation_matrix @ state_items
     new_state_items = new_state_items.transpose().reshape(1,state_item_count,dimensions)
     rotated_transition["observations"]["state"][..., state_indices] = new_state_items
+    rotated_transition["next_observations"]["state"][..., state_indices] = new_state_items
+    
     # print("Rotated State:")
     # print(rotated_transition["observations"]["state"][..., state_indices])
 
@@ -79,6 +81,7 @@ def rotate_single_transition(
     #==========================================
     # States
     rotated_transition["observations"]["state"][..., state_indices] = new_state_items
+    rotated_transition["next_observations"]["state"][..., state_indices] = new_state_items
     # print(rotated_transition["observations"]["state"][..., state_indices])
     # print("=====================================")
     # Actions
