@@ -7,6 +7,7 @@ from scipy.spatial.transform import Rotation
 def rotate_transitions(
     transitions,
     radians,
+    previous_rotated_transition=0
 ):
     rotated_transitions = []
     if isinstance(transitions, list):
@@ -15,12 +16,14 @@ def rotate_transitions(
                 rotate_single_transition(
                     t,
                     radians,
+                    previous_rotated_transition
                 )
             )
     else:
         rotated_transitions = rotate_single_transition(
             transitions,
             radians,
+            previous_rotated_transition
         )
         
     return rotated_transitions
@@ -28,6 +31,7 @@ def rotate_transitions(
 def rotate_single_transition(
     transition,
     radians,
+    previous_rotated_transition
 ):
     rotated_transition = copy.deepcopy(transition)
     
@@ -47,7 +51,7 @@ def rotate_single_transition(
     action_item_count_array = np.arange(action_item_count)
     action_indices = dimensions*action_item_count_array[:, None] + np.array([0, 1, 2])
     rotation_matrix = Rotation.from_euler('z', radians).as_matrix()
-    print(action_indices)
+    # print(action_indices)
 
     #==========================================
     # Rotate states/actions
@@ -55,10 +59,18 @@ def rotate_single_transition(
     # States
     # print("Original State:")
     # print(rotated_transition["observations"]["state"][..., state_indices])
-    state_items = rotated_transition["observations"]["state"][..., state_indices]
-    state_items = state_items.transpose().reshape(dimensions,state_item_count)
-    new_state_items = rotation_matrix @ state_items
-    new_state_items = new_state_items.transpose().reshape(1,state_item_count,dimensions)
+    if (previous_rotated_transition == 0):
+        state_items = rotated_transition["observations"]["state"][..., state_indices]
+        state_items = state_items.transpose().reshape(dimensions,state_item_count)
+        new_state_items = rotation_matrix @ state_items
+        new_state_items = new_state_items.transpose().reshape(1,state_item_count,dimensions)
+    else:
+        new_state_items = previous_rotated_transition["next_observations"]["state"][..., state_indices]
+
+    next_state_items = rotated_transition["next_observations"]["state"][..., state_indices]
+    next_state_items = next_state_items.transpose().reshape(dimensions,state_item_count)
+    new_next_state_items = rotation_matrix @ next_state_items
+    new_next_state_items = new_next_state_items.transpose().reshape(1,state_item_count,dimensions)
     rotated_transition["observations"]["state"][..., state_indices] = new_state_items
     rotated_transition["next_observations"]["state"][..., state_indices] = new_state_items
     

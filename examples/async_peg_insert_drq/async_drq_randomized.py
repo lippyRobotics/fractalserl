@@ -178,8 +178,9 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
 
     # Mirrored transitions are inserted together after the episode ends
     pending_flipped_x = []
-    pending_rotated_45 = []
+    pending_rotated = []
     pending_flipped_y = []
+    previous_rotated_transition = 0
 
     # Re-tighten gripper every <close_step_frequency>
     step_count = 0
@@ -235,8 +236,10 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
             # pending_flipped_x.append(
             #     symm_insertion.reflect_transitions(transition, image_keys, invert_state_indices_x, invert_action_indices_x)
             # )
-            pending_rotated_45.append(
-                rotation_insertion.rotate_transitions(transition, (np.pi / 4))
+            rotated_transition = rotation_insertion.rotate_transitions(transition, (np.pi), previous_rotated_transition)
+            previous_rotated_transition = rotated_transition
+            pending_rotated.append(
+                rotated_transition
             )
 
             obs = next_obs
@@ -245,9 +248,10 @@ def actor(agent: DrQAgent, data_store, env, sampling_rng, image_keys, y_obs_idx)
                 # for flipped_transition in pending_flipped_x:
                 #     data_store.insert(flipped_transition)
                 # pending_flipped_x.clear()
-                for rotated_transition in pending_rotated_45:
+                for rotated_transition in pending_rotated:
                     data_store.insert(rotated_transition)
-                pending_rotated_45.clear()
+                pending_rotated.clear()
+                previous_rotated_transition=0
                 # for flipped_transition in pending_flipped_y:
                 #     data_store.insert(flipped_transition)
                 # pending_flipped_y.clear()

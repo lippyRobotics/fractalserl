@@ -95,7 +95,7 @@ if __name__ == "__main__":
                 #     symm_insertion.reflect_transitions(batch, image_keys, invert_state_indices_x, invert_action_indices_x)
                 # )
                 transitions.extend(
-                    rotation_insertion.rotate_transitions(batch, (np.pi/4))
+                    rotation_insertion.rotate_transitions(batch, (np.pi), 0)
                 )
 
                 success_count += 1
